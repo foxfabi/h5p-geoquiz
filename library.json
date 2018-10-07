@@ -1,0 +1,59 @@
+{
+  "title": "H5P Geography Quiz",
+  "description": "Create a Quiz on wich the users use a GeoMap to answer ...",
+  "majorVersion": 1,
+  "minorVersion": 1,
+  "patchVersion": 1,
+  "runnable": 1,
+  "fullscreen": 0,
+  "embedTypes": [
+    "iframe"
+  ],
+  "machineName": "H5P.GeoQuiz",
+  "license": "MIT",
+  "author": "fabforge, Fabian Dennler",
+  "coreApi": {
+    "majorVersion": 1,
+    "minorVersion": 1
+  },
+  "preloadedCss": [
+    {
+      "path": "css/leaflet.css"
+    },
+    {
+      "path": "css/GeoQuiz.css"
+    }   
+  ],
+  "preloadedJs": [
+    {
+      "path": "js/leaflet.js"
+    },
+    {
+      "path": "js/GeoQuiz.js"
+    }
+  ],
+  "preloadedDependencies": [
+    {
+      "machineName": "H5P.JoubelUI",
+      "majorVersion": 1,
+      "minorVersion": 3
+    }
+  ],
+  "editorDependencies": [
+    {
+      "machineName": "H5PEditor.ShowWhen",
+      "majorVersion": 1,
+      "minorVersion": 0
+    },
+    {
+      "machineName": "H5PEditor.VerticalTabs",
+      "majorVersion": 1,
+      "minorVersion": 3
+    },
+    {
+      "machineName": "H5PEditor.CoordinateSelector",
+      "majorVersion": 1,
+      "minorVersion": 0
+    }
+  ]
+}

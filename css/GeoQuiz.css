@@ -1,0 +1,36 @@
+#h5p-geoquiz-map-content .leaflet-grab {
+  cursor: crosshair;
+}
+#h5p-geoquiz-answer-container,
+#h5p-geoquiz-question-container,
+#h5p-geoquiz-intro-container {
+  position: fixed; /* Sit on top of the page content */
+  display: block; /* Hidden by default */
+  width: 100%; /* Full width (cover the whole page) */
+  top: 0;
+  text-align: center;
+  left: 0;
+  right: 0;
+  background-color: rgba(255,255,255,0.3); /* background with opacity */
+  z-index: 9999; /* Specify a stack order in case you're using a different order for other elements */
+}
+
+#h5p-geoquiz-intro,
+#h5p-geoquiz-answer-container,
+#h5p-geoquiz-question-container {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+#h5p-geoquiz-answer-content .h5p-joubelui-button {
+  margin: 0 0 0.5em 0.5em;
+}
+.inner {
+  display: table;
+  width: 100%;
+  height: 100%;
+}
+.child {
+  display: table-cell;
+  vertical-align: middle;
+}

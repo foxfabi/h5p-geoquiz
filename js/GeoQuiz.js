@@ -1,0 +1,374 @@
+var H5P = H5P || {};
+/**
+ * Constructor.
+ */
+H5P.GeoQuiz = (function ($, JoubelUI) {
+  function GeoQuiz(options) {
+    if (!(this instanceof H5P.GeoQuiz)) {
+      return new H5P.GeoQuiz(options);
+    }
+    this.options = options;
+    this.userScore = 0;
+    this.maxPointsPerQuestion = 1000;
+    this.geoCountry = '';
+    this.maxScore = this.maxPointsPerQuestion * this.options.questions.length;
+    this.theMap = undefined;
+    H5P.EventDispatcher.call(this);
+    var self = this;
+    this.on('resize', self.resize, self);
+  }
+  GeoQuiz.prototype = Object.create(H5P.EventDispatcher.prototype);
+  GeoQuiz.prototype.constructor = GeoQuiz;
+  
+  /**
+   * Append field to wrapper.
+   *
+   * @param {jQuery} $container
+   */
+  GeoQuiz.prototype.attach = function ($container) {
+    var self = this;
+    this.questionIndex = 0;
+    // Let's shuffle the questions
+    this.options.questions = H5P.shuffleArray(this.options.questions);
+    this.$container = $container
+      .addClass('h5p-geoquiz');
+
+    this.$overlayContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-main-content'
+    }).appendTo($container);
+    
+    var introContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-intro-container',
+    }).appendTo(this.$overlayContainer);
+
+    var introInnerContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-intro-inner-container',
+      'class': 'inner',
+    }).appendTo(introContainer);
+    
+    var intro = $('<div/>', {
+      'id': 'h5p-geoquiz-intro',
+      'class': 'child',
+      html: this.options.intro
+    }).appendTo(introInnerContainer);
+    
+    
+    JoubelUI.createButton({
+      'class': 'h5p-geoquiz-start',
+      'id': 'h5p-geoquiz-start',
+      'html': this.options.l10n.startBtnLabel,
+    }).click(function () {
+      $('#h5p-geoquiz-main-content').hide();
+      $('#h5p-geoquiz-question-container').show();
+      self.showQuestion();
+    }).appendTo(intro);
+
+    this.$questionContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-question-container'
+    }).appendTo($container).hide();
+
+    var questionInnerContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-question-content',
+      //'class': 'inner',
+    }).appendTo(this.$questionContainer);
+
+    this.$answerContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-answer-container'
+    }).appendTo($container).hide();
+    
+    var answerInnerContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-answer-inner-container',
+      'class': 'inner',
+    }).appendTo(this.$answerContainer);
+
+    var answerContent = $('<div/>', {
+      'id': 'h5p-geoquiz-answer-content',
+      'class': 'child',
+    }).appendTo(answerInnerContainer);
+
+    this.scoreBar = new H5P.JoubelScoreBar(this.maxPointsPerQuestion);
+    this.scoreBar.appendTo(answerContent);
+    JoubelUI.createButton({
+      'class': 'h5p-geoquiz-next child',
+      'id': 'h5p-geoquiz-next',
+      'html': this.options.l10n.nextBtnLabel,
+    }).click(function () {
+      self.questionIndex++;
+      $('#h5p-geoquiz-answer-container').hide();
+      self.showQuestion();
+    }).appendTo(answerContent);
+
+    this.$mapContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-map-content'
+    }).appendTo($container);
+
+    this.theMap = $('<div>', {
+      'class': 'h5p-geoquiz-map',
+      'id': 'h5p-geoquiz-map',
+      html: '&nbsp;'
+    });
+
+    this.$mapContainer.append(this.theMap);
+    this.$container.append(this.$overlayContainer);
+    this.$container.append(this.$mapContainer);
+    this.loadMap();
+  };
+
+  /**
+   * Show the actual question from question set
+   */
+  GeoQuiz.prototype.showQuestion = function () {
+    var self = this;
+    self.scoreBar.setScore(0);
+    self.geoCountry = '';
+    if (self.$userMarker !== undefined) {
+      self.map.removeLayer(self.$userMarker);
+    }
+    if (self.$answerMarker !== undefined) {
+      self.map.removeLayer(self.$answerMarker);
+    }
+    if (self.drawnItems !== undefined) {
+      self.map.removeLayer(self.drawnItems);
+    }
+    if (self.questionIndex > (self.options.questions.length - 1) ) {
+      // No questions left, so show overall feedback
+      $('#h5p-geoquiz-next').hide();
+      // Add overall feedback using "You got @score of @total points"
+      var scoreText = self.options.l10n.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
+      $('#h5p-geoquiz-answer-content').text(scoreText);
+      $('#h5p-geoquiz-answer-container').show();
+    } else {
+      // Show next question
+      $('#h5p-geoquiz-question-content').text(self.options.questions[self.questionIndex].text);
+      $('#h5p-geoquiz-question-container').show();
+    }
+  };
+  /**
+   * Add a marker into leaflet map on click event
+   * Calculates points for given answer
+   *
+   * @param {Event} event
+   */  
+   // Leaflet's default projection is EPSG:3857, also known as "Google Mercator" or "Web Mercator"
+  GeoQuiz.prototype.addMarker = function (event) {
+    var self = this;
+    var points = 0;
+    var question = self.geoquiz.options.questions[self.geoquiz.questionIndex];
+    // Store user answer as a leaflet marker
+    self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false }).addTo(self.geoquiz.map);
+    if (question.locationType === 'location') {
+      var latlng = self.geoquiz.coordSplit(question.typeLocation);
+      // Store answer answer as a leaflet marker
+      self.geoquiz.$answerMarker = L.marker(latlng, { draggable: false }).addTo(self.geoquiz.map);
+      var distance = parseInt(latlng.distanceTo(event.latlng) / 1000);
+      points = (self.geoquiz.maxPointsPerQuestion - distance);
+      if (points < 0) {
+        points = 0;
+      }
+      self.geoquiz.updateScore(points);
+    } else if (question.locationType === 'area') {
+      var area = self.geoquiz.options.questions[self.geoquiz.questionIndex].typeArea;
+      self.geoquiz.isMarkerInsideArea(area, self.geoquiz.$userMarker).then(function (response) {
+        if (self.geoquiz.userCountry === self.geoquiz.geoCountry) {
+          points = parseInt(self.geoquiz.maxPointsPerQuestion);
+        }
+        self.geoquiz.updateScore(points);
+      });
+    }
+  };
+  /**
+   * Check if the user marker is within the given area polygon
+   *
+   * @param {String} area name to load
+   * @param {L.marker} marker
+   */  
+   GeoQuiz.prototype.isMarkerInsideArea = function (area, marker) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      self.loadArea( area ).then(function(loadAreaResponse) {
+        self.getNominatimCountry(marker).then(function (getNominatimCountryResponse) {
+          resolve("isMarkerInsideArea worked!");
+        });
+      });
+    });
+  }
+
+  /**
+   * Load geoJSON encoded country multipolygon
+   *
+   * @param {String} area name to load
+   */  
+  GeoQuiz.prototype.loadArea = function (area) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      setTimeout(function() {
+        self.geoCountry = '';
+        $.getJSON( H5P.getLibraryPath('H5P.GeoQuiz') + "/geojson-data/" + area + ".geo.json")
+          .done(function( json ) {
+            self.drawnItems = new L.FeatureGroup();
+            var geojsonLayer = L.geoJson(json);
+            geojsonLayer.eachLayer(
+              function(l){
+                self.geoCountry = l.feature.properties.name;
+                self.drawnItems.addLayer(l);
+              }
+            );
+            self.map.addLayer(self.drawnItems);
+            resolve("loadArea worked!");
+          })
+          .fail(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ", " + error;
+            console.log( "Request Failed: " + err );
+            reject(Error("loadArea broke"));
+          });
+      }, 10);
+    });
+    
+  }
+  /**
+   * Get country of marker by asking nominatim.openstreetmap.org
+   *
+   * @param {L.marker} marker
+   */  
+  GeoQuiz.prototype.getNominatimCountry = function (marker) {
+    var self = this;
+    var x = marker.getLatLng().lat, y = marker.getLatLng().lng;
+    self.userCountry = 'Unknow';
+    return new Promise(function(resolve, reject) {
+      // Force language to en to match geojson naming
+      var url = "https://nominatim.openstreetmap.org/search?q="+x+","+y+"&format=json&addressdetails=1&accept-language=en";
+      $.getJSON( url )
+          .done(function( data ) {
+            var queryCountry = '';
+            $.each( data, function( key, val ) {
+              self.userCountry = val.address.country;
+            });
+            resolve("getNominatimCountry worked!");
+            //
+          })
+          .fail(function( jqxhr, textStatus, error ) {
+            var err = textStatus + ", " + error;
+            console.log( "Request Failed: " + err );
+            reject(Error("getNominatimCountry broke"));
+          });
+
+    });
+  }
+  /**
+   * Update score and show score bar
+   *
+   * @param {number} score
+   */
+  GeoQuiz.prototype.updateScore = function (points) {
+    this.userScore += points;
+    this.scoreBar.setScore(points);
+    $('#h5p-geoquiz-answer-container').show();
+    $('#h5p-geoquiz-question-container').hide();
+  }
+  
+
+  GeoQuiz.prototype.setContainerHeight = function() {
+    var containerWidth = $('.h5p-geoquiz').width();
+    var offset = parseInt($('.h5p-actions').height());
+    var containerHeight = parseInt(Math.round(containerWidth / 21 * 9)) - offset;
+    $('#h5p-geoquiz-map').height(containerHeight);
+    $('#h5p-geoquiz-intro-container').height(containerHeight);
+    $('#h5p-geoquiz-answer-container').height(containerHeight);
+    return containerHeight;
+  };  
+
+  
+  /**
+   * Update the dimensions of the task when resizing the task.
+   */
+  GeoQuiz.prototype.resize = function () {
+    var self = this;
+    self.setContainerHeight();
+    setTimeout(function () {
+      if (H5P.isFramed === true) {
+        var checkHeight = setInterval(function(){
+          var frameId = 'h5p-iframe-' + H5P.instances[0].contentId;
+          var containerHeight = parseInt($('.h5p-geoquiz').height()) + parseInt($('.h5p-actions').height());
+          var frameHeight = window.parent.jQuery('#' + frameId).height();
+          if(containerHeight !== frameHeight) {
+            window.parent.jQuery('#' + frameId).height(containerHeight);
+          } else {
+            clearInterval(checkHeight);
+          }
+        }, 10);
+      }
+    }, 10);
+  };  
+
+  GeoQuiz.prototype.coordSplit = function (text) {
+    var res = text.split(",");
+    return L.latLng(res[0], res[1]);
+  }
+  
+  /**
+   * Load the choosed map from settings
+   */
+  GeoQuiz.prototype.loadMap = function () {
+    var self = this;
+    setTimeout(function(){
+      self.map = L.map('h5p-geoquiz-map', { zoomControl:false });
+      var latlng = self.coordSplit(self.options.mapCenter);
+      //var res = self.options.mapCenter.split(",");
+      //var latlng = L.latLng(res[0], res[1]);
+      
+      self.map.setView(latlng, self.options.mapZoom);
+      self.map.on('click', self.addMarker, {geoquiz: self});    
+
+      switch (self.options.mapType) {
+        case 'CartoDB.VoyagerNoLabels':
+          var VoyagerNoLabels = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+          });
+          self.map.addLayer(VoyagerNoLabels);
+          break;
+        case 'Hydda.Base':
+        
+          var Hydda_Base = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/base/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          });
+          self.map.addLayer(Hydda_Base);
+          break;
+        case 'Stamen.Watercolor':
+          var Stamen_Watercolor = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            subdomains: 'abcd',
+            minZoom: 1,
+            maxZoom: 16,
+            ext: 'png'
+          });
+          self.map.addLayer(Stamen_Watercolor);
+          break;
+        case 'Stamen.TerrainBackground':
+          var Stamen_TerrainBackground = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain-background/{z}/{x}/{y}{r}.{ext}', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            subdomains: 'abcd',
+            minZoom: 0,
+            maxZoom: 18,
+            ext: 'png'
+          });
+          self.map.addLayer(Stamen_TerrainBackground);
+          break;
+        case 'Esri.WorldImagery':
+          var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+          });
+          self.map.addLayer(Esri_WorldImagery);
+          break;
+        default:
+          break;
+      }
+    }, 200);
+  };
+
+  return GeoQuiz;
+  
+  
+})(H5P.jQuery, H5P.JoubelUI);

@@ -1,0 +1,298 @@
+[
+  {
+    "name": "intro",
+    "type": "text",
+    "widget": "html",
+    "label": "Introduction text",
+    "importance": "high",
+    "default": "Answer the following questions by pressing the correct location on the map.",
+    "description": "Will be displayed above the quiz.",
+    "enterMode": "div",
+    "tags": [
+      "strong",
+      "em",
+      "u",
+      "a",
+      "ul",
+      "ol",
+      "h2",
+      "h3"
+    ],
+    "common": false
+  },
+  {
+    "name": "mapType",
+    "type": "select",
+    "label": "Map type",
+    "description": "Choose the map type to use in this quiz.",
+    "options": [
+      {
+        "value": "CartoDB.VoyagerNoLabels",
+        "label": "CartoDB - VoyagerNoLabels"
+      },
+      {
+        "value": "Hydda.Base",
+        "label": "Hydda - Base"
+      },
+      {
+        "value": "Stamen.Watercolor",
+        "label": "Stamen - Watercolor"
+      },
+      {
+        "value": "Stamen.TerrainBackground",
+        "label": "Stamen - TerrainBackground"
+      },
+      {
+        "value": "Esri.WorldImagery",
+        "label": "Esri - WorldImagery"
+      }
+    ],
+    "default": "CartoDB.VoyagerNoLabels"
+  },
+  {
+    "name": "mapCenter",
+    "type": "text",
+    "widget": "coordinateSelector",
+    "label": "Map center",
+    "importance": "high",
+    "optional": false,
+    "placeholder": "42.698334,23.319941",
+    "description": "Coordinate used as center of the map"
+  },
+  {
+    "name": "mapZoom",
+    "type": "number",
+    "label": "Default zoom level",
+    "description": "Lower zoom levels means that the map shows entire continents, while higher zoom levels means that the map can show details of a city.",
+    "min": 1,
+    "max": 20,
+    "step": 1,
+    "default": 2
+  },
+  {
+    "name": "questions",
+    "type": "list",
+    "widgets": [
+      {
+        "name": "VerticalTabs",
+        "label": "Default"
+      }
+    ],
+    "label": "Questions",
+    "entity": "question",
+    "importance": "high",
+    "min": 1,
+    "defaultNum": 1,
+    "field": {
+      "name": "question",
+      "type": "group",
+      "label": "Question",
+      "importance": "high",
+      "fields": [
+        {
+          "name": "text",
+          "type": "text",
+          "label": "Question",
+          "importance": "high",
+          "optional": false,
+          "description": "Textual question for the location to find",
+          "placeholder": "Where is Sofia in Bulgary?"
+        },
+        
+        {
+          "name": "locationType",
+          "type": "select",
+          "label": "Location type",
+          "importance": "high",
+          "options": [
+            {
+              "value": "area",
+              "label": "Area"
+            },
+            {
+              "value": "location",
+              "label": "Location"
+            }
+          ],
+          "default": "location"
+        },
+        {
+          "name": "typeLocation",
+          "type": "group",
+          "expanded": false,
+          "widget": "showWhen",
+          "showWhen": {
+            "rules": [
+              {
+                "field": "locationType",
+                "equals": [
+                  "location"
+                ]
+              }
+            ]
+          },
+          "label": "Location",
+          "fields": [
+            {
+              "name": "coordinate",
+              "type": "text",
+              "widget": "coordinateSelector",
+              "label": "Coordinate",
+              "importance": "high",
+              "optional": false,
+              "placeholder": "42.698334,23.319941",
+              "description": "Coordinate of location"
+            }
+          ]
+        },
+        {
+          "name": "typeArea",
+          "type": "group",
+          "expanded": false,
+          "widget": "showWhen",
+          "showWhen": {
+            "rules": [
+              {
+                "field": "locationType",
+                "equals": [
+                  "area"
+                ]
+              }
+            ]
+          },
+          "label": "Area",
+          "fields": [
+            {
+              "name": "area",
+              "type": "select",
+              "label": "Area",
+              "importance": "high",
+              "optional": false,
+              "options": [
+                {
+                  "value": "AFG",
+                  "label": "Afghanistan"
+                },
+                {
+                  "value": "AGO",
+                  "label": "Angola"
+                },
+                {
+                  "value": "ALB",
+                  "label": "Albania"
+                },
+                {
+                  "value": "ARE",
+                  "label": "United Arab Emirates"
+                },
+                {
+                  "value": "ARG",
+                  "label": "Argentina"
+                },
+                {
+                  "value": "ARM",
+                  "label": "Armenia"
+                },
+                {
+                  "value": "ATA",
+                  "label": "Antarctica"
+                },
+                {
+                  "value": "ATF",
+                  "label": "French Southern and Antarctic Lands"
+                },
+                {
+                  "value": "AUS",
+                  "label": "Australia"
+                },
+                {
+                  "value": "AUT",
+                  "label": "Austria"
+                },
+                {
+                  "value": "AZE",
+                  "label": "Azerbaijan"
+                },
+                {
+                  "value": "BDI",
+                  "label": "Burundi"
+                },
+                {
+                  "value": "BEL",
+                  "label": "Belgium"
+                },
+                
+                
+                {
+                  "value": "ITA",
+                  "label": "Italy"
+                },
+                {
+                  "value": "USA",
+                  "label": "United States of America"
+                },
+                {
+                  "value": "CHE",
+                  "label": "Switzerland"
+                }
+              ],
+              "default": "USA",
+              "description": "Area of location"
+            }
+          ]
+        }
+
+      ]
+    }
+  },
+  {
+    "name": "l10n",
+    "type": "group",
+    "label": "Localize",
+    "importance": "low",
+    "common": true,
+    "optional": true,
+    "fields": [  
+      {
+        "name": "nextBtnLabel",
+        "label": "Text for the \"Next\" button",
+        "importance": "low",
+        "type": "text",
+        "default": "Next",
+        "common": true
+      },
+      {
+        "name": "prevBtnLabel",
+        "type": "text",
+        "label": "Text for the \"Previous\" button",
+        "importance": "low",
+        "default": "Previous",
+        "common": true
+      },
+      {
+        "label": "Feedback text",
+        "importance": "low",
+        "name": "overallFeedback",
+        "type": "text",
+        "default": "You got @score of @total possible points.",
+        "description": "Feedback text, variables available: @score and @total. Example: 'You got @score of @total possible points'"
+      },
+      {
+        "label": "Text for the \"Start\" button",
+        "importance": "low",
+        "name": "startBtnLabel",
+        "type": "text",
+        "default": "Start",
+        "optional": true
+      },
+      {
+        "label": "Text for \"Score\" message",
+        "importance": "low",
+        "name": "scorePlaceholder",
+        "type": "text",
+        "default": "Score: @value",
+        "optional": true
+      }
+    ]
+  }
+]
