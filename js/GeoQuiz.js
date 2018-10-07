@@ -203,7 +203,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     return new Promise(function(resolve, reject) {
       setTimeout(function() {
         self.geoCountry = '';
-        $.getJSON( H5P.getLibraryPath('H5P.GeoQuiz') + "/geojson-data/" + area + ".geo.json")
+        $.getJSON( self.getLibraryFilePath('') + "geojson-data/" + area + ".geo.json")
           .done(function( json ) {
             self.drawnItems = new L.FeatureGroup();
             var geojsonLayer = L.geoJson(json);
