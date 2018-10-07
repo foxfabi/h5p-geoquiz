@@ -2,9 +2,9 @@ H5P GeoQuiz
 =========================
 
 H5P.GeoQuiz let's you create geography quizzes.
-The questions are answered by clicking the rigth location or area in a leaflet map.
+The questions are answered by clicking the correct location or area in a leaflet map.
 The areas geo-json geometry files of the world and countries are provided by Johan Sundström (https://github.com/johan/world.geo.json).
-To use still content type you will also need the H5PEditor.CoordinateSelector widget.
+To use this content type you will also need the H5PEditor.CoordinateSelector widget (https://github.com/foxfabi/h5peditor-coordinateselector).
 
 ## License
 
