@@ -252,23 +252,7 @@
     "importance": "low",
     "common": true,
     "optional": true,
-    "fields": [  
-      {
-        "name": "nextBtnLabel",
-        "label": "Text for the \"Next\" button",
-        "importance": "low",
-        "type": "text",
-        "default": "Next",
-        "common": true
-      },
-      {
-        "name": "prevBtnLabel",
-        "type": "text",
-        "label": "Text for the \"Previous\" button",
-        "importance": "low",
-        "default": "Previous",
-        "common": true
-      },
+    "fields": [
       {
         "label": "Feedback text",
         "importance": "low",
@@ -277,6 +261,14 @@
         "default": "You got @score of @total possible points.",
         "description": "Feedback text, variables available: @score and @total. Example: 'You got @score of @total possible points'"
       },
+      {
+        "name": "nextBtnLabel",
+        "label": "Text for the \"Next\" button",
+        "importance": "low",
+        "type": "text",
+        "default": "Next",
+        "optional": true
+      },      
       {
         "label": "Text for the \"Start\" button",
         "importance": "low",
