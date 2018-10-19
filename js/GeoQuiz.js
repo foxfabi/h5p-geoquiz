@@ -98,6 +98,27 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       self.showQuestion();
     }).appendTo(answerContent);
 
+    this.$feedbackContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-feedback-container'
+    }).appendTo($container).hide();
+    var feedbackInnerContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-feedback-inner-container',
+      'class': 'inner',
+    }).appendTo(this.$feedbackContainer);
+    var feedbackContent = $('<div/>', {
+      'id': 'h5p-geoquiz-feedback-content',
+      'class': 'child',
+    }).appendTo(feedbackInnerContainer);
+    var feedbackMessage = $('<p/>', {
+      'id': 'h5p-geoquiz-feedback-content-message',
+    }).appendTo(feedbackContent);
+    this.$retryButton = JoubelUI.createButton({
+      'class': 'h5p-results-retry-button h5p-invisible h5p-button',
+      'html': this.options.l10n.retryBtnLabel
+    }).click(function () {
+      self.resetTask();
+    }).appendTo(feedbackContent);
+
     this.$mapContainer = $('<div/>', {
       'id': 'h5p-geoquiz-map-content'
     }).appendTo($container);
@@ -131,18 +152,35 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       self.map.removeLayer(self.drawnItems);
     }
     if (self.questionIndex > (self.options.questions.length - 1) ) {
-      // No questions left, so show overall feedback
-      $('#h5p-geoquiz-next').hide();
-      // Add overall feedback using "You got @score of @total points"
+      // No questions left, add overall feedback using "You got @score of @total points"
       var scoreText = self.options.l10n.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
-      $('#h5p-geoquiz-answer-content').text(scoreText);
-      $('#h5p-geoquiz-answer-container').show();
+      $('#h5p-geoquiz-feedback-content-message').html( scoreText );
+      $('#h5p-geoquiz-feedback-container').show();
+      self.triggerXAPIScored(self.userScore, self.maxScore, "done", true, true);
+      if (self.userScore < self.maxScore) {
+        self.$retryButton.removeClass('h5p-invisible');
+      } else {
+        self.$retryButton.addClass('h5p-invisible');
+      }
     } else {
       // Show next question
       $('#h5p-geoquiz-question-content').text(self.options.questions[self.questionIndex].text);
       $('#h5p-geoquiz-question-container').show();
     }
   };
+
+  /**
+   * Restart quiz
+   */
+  GeoQuiz.prototype.resetTask = function () {
+    var self = this;
+    self.questionIndex = 0;
+    self.userScore = 0;
+    self.options.questions = H5P.shuffleArray(self.options.questions);
+    $('#h5p-geoquiz-feedback-container').hide();
+    self.showQuestion();
+  }
+
   /**
    * Add a marker into leaflet map on click event
    * Calculates points for given answer
@@ -176,6 +214,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       });
     }
   };
+
   /**
    * Check if the user marker is within the given area polygon
    *
@@ -223,8 +262,8 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
           });
       }, 10);
     });
-    
   }
+
   /**
    * Get country of marker by asking nominatim.openstreetmap.org
    *
@@ -254,6 +293,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
 
     });
   }
+
   /**
    * Update score and show score bar
    *
@@ -273,6 +313,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     var containerHeight = parseInt(Math.round(containerWidth / 21 * 9)) - offset;
     $('#h5p-geoquiz-map').height(containerHeight);
     $('#h5p-geoquiz-intro-container').height(containerHeight);
+    $('#h5p-geoquiz-feedback-container').height(containerHeight);
     $('#h5p-geoquiz-answer-container').height(containerHeight);
     return containerHeight;
   };  
@@ -313,9 +354,6 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     setTimeout(function(){
       self.map = L.map('h5p-geoquiz-map', { zoomControl:false });
       var latlng = self.coordSplit(self.options.mapCenter);
-      //var res = self.options.mapCenter.split(",");
-      //var latlng = L.latLng(res[0], res[1]);
-      
       self.map.setView(latlng, self.options.mapZoom);
       self.map.on('click', self.addMarker, {geoquiz: self});    
 
@@ -367,8 +405,5 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       }
     }, 200);
   };
-
   return GeoQuiz;
-  
-  
 })(H5P.jQuery, H5P.JoubelUI);

@@ -221,6 +221,94 @@
                   "value": "BEL",
                   "label": "Belgium"
                 },
+                {
+                  "value": "BEN",
+                  "label": "Benin"
+                },
+                {
+                  "value": "BFA",
+                  "label": "Burkina Faso"
+                },
+                {
+                  "value": "BGD",
+                  "label": "Bangladesh"
+                },
+                {
+                  "value": "BGR",
+                  "label": "Bulgaria"
+                },
+                {
+                  "value": "BHS",
+                  "label": "The Bahamas"
+                },
+                {
+                  "value": "BIH",
+                  "label": "Bosnia and Herzegovina"
+                },
+                {
+                  "value": "BLR",
+                  "label": "Belarus"
+                },
+                {
+                  "value": "BLZ",
+                  "label": "Belize"
+                },
+                {
+                  "value": "BMU",
+                  "label": "Bermuda"
+                },
+                {
+                  "value": "BOL",
+                  "label": "Bolivia"
+                },
+                {
+                  "value": "BRA",
+                  "label": "Brazil"
+                },
+                {
+                  "value": "BRN",
+                  "label": "Brunei"
+                },
+                {
+                  "value": "BTN",
+                  "label": "Bhutan"
+                },
+                {
+                  "value": "BWA",
+                  "label": "Botswana"
+                },
+                {
+                  "value": "CAF",
+                  "label": "Central African Republic"
+                },
+                {
+                  "value": "CAN",
+                  "label": "Canada"
+                },
+                {
+                  "value": "CHE",
+                  "label": "Switzerland"
+                },
+                {
+                  "value": "CHL",
+                  "label": "Chile"
+                },
+                {
+                  "value": "CHN",
+                  "label": "China"
+                },
+                {
+                  "value": "CIV",
+                  "label": "Ivory Coast"
+                },
+                {
+                  "value": "CMR",
+                  "label": "Cameroon"
+                },
+                {
+                  "value": "COD",
+                  "label": "Democratic Republic of the Congo"
+                },
                 
                 
                 {
@@ -230,10 +318,6 @@
                 {
                   "value": "USA",
                   "label": "United States of America"
-                },
-                {
-                  "value": "CHE",
-                  "label": "Switzerland"
                 }
               ],
               "default": "USA",
@@ -275,6 +359,14 @@
         "name": "startBtnLabel",
         "type": "text",
         "default": "Start",
+        "optional": true
+      },
+      {
+        "label": "Text for the \"Retry\" button",
+        "importance": "low",
+        "name": "retryBtnLabel",
+        "type": "text",
+        "default": "Retry",
         "optional": true
       },
       {
