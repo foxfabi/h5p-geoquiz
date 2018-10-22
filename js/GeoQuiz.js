@@ -28,6 +28,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.attach = function ($container) {
     var self = this;
     this.questionIndex = 0;
+    this.defineMarkers();
     // Let's shuffle the questions
     this.options.questions = H5P.shuffleArray(this.options.questions);
     this.$container = $container
@@ -220,8 +221,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     var self = this;
     var points = 0;
     var question = self.geoquiz.options.questions[self.geoquiz.questionIndex];
-    // Store user answer as a leaflet marker
-    self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false }).addTo(self.geoquiz.map);
+    self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false });
     if (question.locationType === 'location') {
       var latlng = self.geoquiz.coordSplit(question.typeLocation);
       // Store answer answer as a leaflet marker
@@ -231,6 +231,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       if (points < 0) {
         points = 0;
       }
+      // Store user answer as a leaflet marker
+      var answerIcon = self.geoquiz.whichMarker(points);
+      self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
       self.geoquiz.updateScore(points);
     } else if (question.locationType === 'area') {
       var area = self.geoquiz.options.questions[self.geoquiz.questionIndex].typeArea;
@@ -238,6 +241,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
         if (self.geoquiz.userCountry === self.geoquiz.geoCountry) {
           points = parseInt(self.geoquiz.maxPointsPerQuestion);
         }
+        // Store user answer as a leaflet marker
+        var answerIcon = self.geoquiz.whichMarker(points);
+        self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
         self.geoquiz.updateScore(points);
       });
     }
@@ -395,7 +401,6 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
           self.map.addLayer(VoyagerNoLabels);
           break;
         case 'Hydda.Base':
-        
           var Hydda_Base = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/base/{z}/{x}/{y}.png', {
             maxZoom: 18,
             attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -433,5 +438,66 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       }
     }, 200);
   };
+
+  /**
+   * Get marker icon by points reached
+   */
+  GeoQuiz.prototype.whichMarker = function (points) {
+    var percent = parseInt((points / this.maxPointsPerQuestion) * 100);
+    if (percent <= 25) {
+      return this.redIcon;
+    } else if (percent <= 50) {
+      return this.orangeIcon;
+    } else if (percent <= 75) {
+      return this.yellowIcon;
+    } else if (percent > 75) {
+      return this.greenIcon;
+    }
+  }
+
+  /**
+   * Define markers icon for user answer
+   */
+  GeoQuiz.prototype.defineMarkers = function () {
+    // Create the answer marker icons
+    var imgPath = this.getLibraryFilePath('') + 'css/images/';
+    // more then 75%
+    this.greenIcon = new L.Icon({
+      iconUrl: imgPath + 'marker-icon-2x-green.png',
+      shadowUrl: imgPath + 'marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+    // less then 75%
+    this.yellowIcon = new L.Icon({
+      iconUrl: imgPath + 'marker-icon-2x-yellow.png',
+      shadowUrl: imgPath + 'marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+    // less then 50%
+    this.orangeIcon = new L.Icon({
+      iconUrl: imgPath + 'marker-icon-2x-orange.png',
+      shadowUrl: imgPath + 'marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+    // less then 25%
+    this.redIcon = new L.Icon({
+      iconUrl: imgPath + 'marker-icon-2x-red.png',
+      shadowUrl: imgPath + 'marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+  }
+
   return GeoQuiz;
 })(H5P.jQuery, H5P.JoubelUI);
