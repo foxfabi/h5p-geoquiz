@@ -37,9 +37,35 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       'id': 'h5p-geoquiz-main-content'
     }).appendTo($container);
     
+    this.buildIntroductionPage(this.$overlayContainer);
+    this.buildQuestionPage($container);
+    this.buildAnswerPage($container);
+    this.buildFeedbackPage($container);
+
+    this.$mapContainer = $('<div/>', {
+      'id': 'h5p-geoquiz-map-content'
+    }).appendTo($container);
+
+    this.theMap = $('<div>', {
+      'class': 'h5p-geoquiz-map',
+      'id': 'h5p-geoquiz-map',
+      html: '&nbsp;'
+    });
+
+    this.$mapContainer.append(this.theMap);
+    this.$container.append(this.$overlayContainer);
+    this.$container.append(this.$mapContainer);
+    this.loadMap();
+  };
+
+  /**
+   * Build the introduction page container
+   */
+  GeoQuiz.prototype.buildIntroductionPage = function (container) {
+    var self = this;
     var introContainer = $('<div/>', {
       'id': 'h5p-geoquiz-intro-container',
-    }).appendTo(this.$overlayContainer);
+    }).appendTo(container);
 
     var introInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-intro-inner-container',
@@ -62,19 +88,30 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       $('#h5p-geoquiz-question-container').show();
       self.showQuestion();
     }).appendTo(intro);
+  }
 
+  /**
+   * Build the question page container
+   */
+  GeoQuiz.prototype.buildQuestionPage = function (container) {
     this.$questionContainer = $('<div/>', {
       'id': 'h5p-geoquiz-question-container'
-    }).appendTo($container).hide();
+    }).appendTo(container).hide();
 
     var questionInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-question-content',
       //'class': 'inner',
     }).appendTo(this.$questionContainer);
+  }
 
+  /**
+   * Build the answer page container
+   */
+  GeoQuiz.prototype.buildAnswerPage = function (container) {
+    var self = this;
     this.$answerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-answer-container'
-    }).appendTo($container).hide();
+    }).appendTo(container).hide();
     
     var answerInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-answer-inner-container',
@@ -97,10 +134,16 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       $('#h5p-geoquiz-answer-container').hide();
       self.showQuestion();
     }).appendTo(answerContent);
+  }
 
+  /**
+   * Build the feedback page container
+   */
+  GeoQuiz.prototype.buildFeedbackPage = function (container) {
+    var self = this;
     this.$feedbackContainer = $('<div/>', {
       'id': 'h5p-geoquiz-feedback-container'
-    }).appendTo($container).hide();
+    }).appendTo(container).hide();
     var feedbackInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-feedback-inner-container',
       'class': 'inner',
@@ -118,23 +161,8 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     }).click(function () {
       self.resetTask();
     }).appendTo(feedbackContent);
-
-    this.$mapContainer = $('<div/>', {
-      'id': 'h5p-geoquiz-map-content'
-    }).appendTo($container);
-
-    this.theMap = $('<div>', {
-      'class': 'h5p-geoquiz-map',
-      'id': 'h5p-geoquiz-map',
-      html: '&nbsp;'
-    });
-
-    this.$mapContainer.append(this.theMap);
-    this.$container.append(this.$overlayContainer);
-    this.$container.append(this.$mapContainer);
-    this.loadMap();
-  };
-
+  }
+  
   /**
    * Show the actual question from question set
    */
