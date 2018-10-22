@@ -336,8 +336,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.updateScore = function (points) {
     this.userScore += points;
     this.scoreBar.setScore(points);
-    $('#h5p-geoquiz-answer-container').show();
     $('#h5p-geoquiz-question-container').hide();
+    $('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
+    $('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
   }
   
 
