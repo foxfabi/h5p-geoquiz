@@ -31,8 +31,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     this.defineMarkers();
     // Let's shuffle the questions
     this.options.questions = H5P.shuffleArray(this.options.questions);
-    this.$container = $container
-      .addClass('h5p-geoquiz');
+    this.$container = $container.addClass('h5p-geoquiz');
 
     this.$overlayContainer = $('<div/>', {
       'id': 'h5p-geoquiz-main-content'
@@ -83,7 +82,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     JoubelUI.createButton({
       'class': 'h5p-geoquiz-start',
       'id': 'h5p-geoquiz-start',
-      'html': this.options.l10n.startBtnLabel,
+      'html': this.options.startBtnLabel,
     }).click(function () {
       $('#h5p-geoquiz-main-content').hide();
       $('#h5p-geoquiz-question-container').show();
@@ -129,7 +128,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     JoubelUI.createButton({
       'class': 'h5p-geoquiz-next child',
       'id': 'h5p-geoquiz-next',
-      'html': this.options.l10n.nextBtnLabel,
+      'html': this.options.nextBtnLabel,
     }).click(function () {
       self.questionIndex++;
       $('#h5p-geoquiz-answer-container').hide();
@@ -158,7 +157,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     }).appendTo(feedbackContent);
     this.$retryButton = JoubelUI.createButton({
       'class': 'h5p-results-retry-button h5p-invisible h5p-button',
-      'html': this.options.l10n.retryBtnLabel
+      'html': this.options.retryBtnLabel
     }).click(function () {
       self.resetTask();
     }).appendTo(feedbackContent);
@@ -182,7 +181,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     }
     if (self.questionIndex > (self.options.questions.length - 1) ) {
       // No questions left, add overall feedback using "You got @score of @total points"
-      var scoreText = self.options.l10n.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
+      var scoreText = self.options.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
       $('#h5p-geoquiz-feedback-content-message').html( scoreText );
       $('#h5p-geoquiz-feedback-container').show();
       self.triggerXAPIScored(self.userScore, self.maxScore, "done", true, true);

@@ -330,53 +330,48 @@
     }
   },
   {
-    "name": "l10n",
-    "type": "group",
-    "label": "Localize",
+    "label": "Feedback text",
     "importance": "low",
-    "common": true,
+    "name": "overallFeedback",
+    "type": "text",
+    "default": "You got @score of @total possible points.",
+    "description": "Feedback text, variables available: @score and @total. Example: 'You got @score of @total possible points'",
+    "common": true
+  },
+  {
+    "name": "nextBtnLabel",
+    "label": "Text for the \"Next\" button",
+    "importance": "low",
+    "type": "text",
+    "default": "Next",
     "optional": true,
-    "fields": [
-      {
-        "label": "Feedback text",
-        "importance": "low",
-        "name": "overallFeedback",
-        "type": "text",
-        "default": "You got @score of @total possible points.",
-        "description": "Feedback text, variables available: @score and @total. Example: 'You got @score of @total possible points'"
-      },
-      {
-        "name": "nextBtnLabel",
-        "label": "Text for the \"Next\" button",
-        "importance": "low",
-        "type": "text",
-        "default": "Next",
-        "optional": true
-      },      
-      {
-        "label": "Text for the \"Start\" button",
-        "importance": "low",
-        "name": "startBtnLabel",
-        "type": "text",
-        "default": "Start",
-        "optional": true
-      },
-      {
-        "label": "Text for the \"Retry\" button",
-        "importance": "low",
-        "name": "retryBtnLabel",
-        "type": "text",
-        "default": "Retry",
-        "optional": true
-      },
-      {
-        "label": "Text for \"Score\" message",
-        "importance": "low",
-        "name": "scorePlaceholder",
-        "type": "text",
-        "default": "Score: @value",
-        "optional": true
-      }
-    ]
+    "common": true
+  },      
+  {
+    "name": "startBtnLabel",
+    "label": "Text for the \"Start\" button",
+    "importance": "low",
+    "type": "text",
+    "default": "Start",
+    "optional": true,
+    "common": true
+  },
+  {
+    "name": "retryBtnLabel",
+    "label": "Text for the \"Retry\" button",
+    "importance": "low",
+    "type": "text",
+    "default": "Retry",
+    "optional": true,
+    "common": true
+  },
+  {
+    "name": "scorePlaceholder",
+    "label": "Text for \"Score\" message",
+    "importance": "low",
+    "type": "text",
+    "default": "Score: @value",
+    "optional": true,
+    "common": true
   }
 ]
