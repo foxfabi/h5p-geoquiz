@@ -392,6 +392,13 @@
     "common": true
   },
   {
+    "label": "Text for \"Show solutions\" button",
+    "name": "showSolutionsBtnLabel",
+    "type": "text",
+    "default": "Show solution",
+    "common": true
+  },
+  {
     "name": "scorePlaceholder",
     "label": "Text for \"Score\" message",
     "importance": "low",

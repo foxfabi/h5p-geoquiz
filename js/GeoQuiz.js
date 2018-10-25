@@ -134,6 +134,17 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       $('#h5p-geoquiz-answer-container').hide();
       self.showQuestion();
     }).appendTo(answerContent);
+    
+    // Add retry button, if enabled
+    if(this.options.behaviour.enableSolutionsButton === true) {
+      JoubelUI.createButton({
+        'class': 'h5p-geoquiz-show-solution child',
+        'id': 'h5p-geoquiz-show-solution',
+        'html': this.options.showSolutionsBtnLabel,
+      }).click(function () {
+        self.showQuestionSolution();
+      }).appendTo(answerContent);
+    }      
   }
 
   /**
@@ -171,17 +182,22 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
    */
   GeoQuiz.prototype.showQuestion = function () {
     var self = this;
+    // Reset stored informations
     self.scoreBar.setScore(0);
     self.geoCountry = '';
     if (self.$userMarker !== undefined) {
       self.map.removeLayer(self.$userMarker);
+      self.$userMarker = undefined;
     }
     if (self.$answerMarker !== undefined) {
       self.map.removeLayer(self.$answerMarker);
+      self.$answerMarker = undefined;
     }
     if (self.drawnItems !== undefined) {
       self.map.removeLayer(self.drawnItems);
+      self.drawnItems = undefined;
     }
+    // Check if we are at the end of the quiz or we have other questions
     if (self.questionIndex > (self.options.questions.length - 1) ) {
       // No questions left, add overall feedback using "You got @score of @total points"
       var scoreText = self.options.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
@@ -216,6 +232,19 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   }
 
   /**
+   * Show solution for actual question
+   */
+  GeoQuiz.prototype.showQuestionSolution = function () {
+    var self = this;
+    if (self.$answerMarker !== undefined) {
+      self.$answerMarker.addTo(self.map);
+    }
+    if (self.drawnItems !== undefined) {
+      self.map.addLayer(self.drawnItems);
+    }
+  }
+
+  /**
    * Add a marker into leaflet map on click event
    * Calculates points for given answer
    *
@@ -229,8 +258,11 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false });
     if (question.locationType === 'location') {
       var latlng = self.geoquiz.coordSplit(question.typeLocation);
-      // Store answer answer as a leaflet marker
-      self.geoquiz.$answerMarker = L.marker(latlng, { draggable: false }).addTo(self.geoquiz.map);
+      // Store right answer as a leaflet marker
+      self.geoquiz.$answerMarker = L.marker(latlng, { draggable: false });
+      /*if (self.geoquiz.options.behaviour.enableSolutionsButton === true) {
+        self.geoquiz.$answerMarker.addTo(self.geoquiz.map);
+      }*/
       var distance = parseInt(latlng.distanceTo(event.latlng) / 1000);
       points = (self.geoquiz.maxPointsPerQuestion - distance);
       if (points < 0) {
@@ -291,7 +323,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
                 self.drawnItems.addLayer(l);
               }
             );
-            self.map.addLayer(self.drawnItems);
+            /*if (self.options.behaviour.enableSolutionsButton === true) {
+              self.map.addLayer(self.drawnItems);
+            }*/
             resolve("loadArea worked!");
           })
           .fail(function( jqxhr, textStatus, error ) {
