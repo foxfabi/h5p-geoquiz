@@ -155,12 +155,15 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     var feedbackMessage = $('<p/>', {
       'id': 'h5p-geoquiz-feedback-content-message',
     }).appendTo(feedbackContent);
-    this.$retryButton = JoubelUI.createButton({
-      'class': 'h5p-results-retry-button h5p-invisible h5p-button',
-      'html': this.options.retryBtnLabel
-    }).click(function () {
-      self.resetTask();
-    }).appendTo(feedbackContent);
+    // Add retry button, if enabled
+    if(this.options.behaviour.enableRetry === true) {
+      this.$retryButton = JoubelUI.createButton({
+        'class': 'h5p-results-retry-button h5p-invisible h5p-button',
+        'html': this.options.retryBtnLabel
+      }).click(function () {
+        self.resetTask();
+      }).appendTo(feedbackContent);
+    }
   }
   
   /**
@@ -185,10 +188,13 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       $('#h5p-geoquiz-feedback-content-message').html( scoreText );
       $('#h5p-geoquiz-feedback-container').show();
       self.triggerXAPIScored(self.userScore, self.maxScore, "done", true, true);
-      if (self.userScore < self.maxScore) {
-        self.$retryButton.removeClass('h5p-invisible');
-      } else {
-        self.$retryButton.addClass('h5p-invisible');
+      // Show/Hide retry button, if enabled
+      if(self.options.behaviour.enableRetry === true) {
+        if (self.userScore < self.maxScore) {
+          self.$retryButton.removeClass('h5p-invisible');
+        } else {
+          self.$retryButton.addClass('h5p-invisible');
+        }
       }
     } else {
       // Show next question
