@@ -95,8 +95,17 @@
           "label": "Question",
           "importance": "high",
           "optional": false,
-          "description": "Textual question for the location to find",
+          "description": "Textual question of the location to find",
           "placeholder": "Where is Sofia in Bulgary?"
+        },
+        {
+          "name": "locationLabel",
+          "type": "text",
+          "label": "Location label",
+          "importance": "high",
+          "optional": false,
+          "description": "Text of the location label showed as tooltip in solutions",
+          "placeholder": "Sofia (Bulgary)"
         },
         
         {
@@ -338,7 +347,7 @@
     "optional": true,
     "fields": [
       {
-        "label": "Enable \"Retry\"",
+        "label": "Enable \"Retry\" button",
         "importance": "low",
         "name": "enableRetry",
         "type": "boolean",
@@ -392,19 +401,10 @@
     "common": true
   },
   {
-    "label": "Text for \"Show solutions\" button",
     "name": "showSolutionsBtnLabel",
+    "label": "Text for \"Show solutions\" button",
     "type": "text",
     "default": "Show solution",
-    "common": true
-  },
-  {
-    "name": "scorePlaceholder",
-    "label": "Text for \"Score\" message",
-    "importance": "low",
-    "type": "text",
-    "default": "Score: @value",
-    "optional": true,
     "common": true
   }
 ]

@@ -1,50 +1,143 @@
 var H5P = H5P || {};
-/**
- * Constructor.
- */
-H5P.GeoQuiz = (function ($, JoubelUI) {
-  function GeoQuiz(options) {
+
+H5P.GeoQuiz = (function ($, JoubelUI, Question) {
+  /**
+   * @constructor
+   * @extends Question
+   * @param {object} options Options for geoquiz
+   * @param {string} contentId H5P instance id
+   * @param {Object} contentData H5P instance data
+   */
+   function GeoQuiz(options, contentId, contentData) {
     if (!(this instanceof H5P.GeoQuiz)) {
-      return new H5P.GeoQuiz(options);
+      return new H5P.GeoQuiz(options, contentId, contentData);
     }
-    this.options = options;
+    this.contentId = contentId;
+    Question.call(this, 'geoquiz');
+
+    /**
+     * Keeps track of settings
+     * Extend defaults with provided options
+     */    
+    this.options = $.extend(true, {}, {
+      overallFeedback: "You got @score of @total possible points.",
+      behaviour: {
+        enableRetry: true,
+        enableSolutionsButton: true
+      }
+    }, options);
+
+    /**
+     * Keeps track of the content data. Specifically the previous state.
+     * @type {Object}
+     */
+    this.contentData = contentData;
+    if (contentData !== undefined && contentData.previousState !== undefined) {
+      this.previousState = contentData.previousState;
+      this.questionIndex = this.contentData.previousState.progress;
+    }
+
+    /**
+     * Keeps track of task finished state.
+     * @type {boolean}
+     */
+    this.answered = false;
+
+    /**
+     * Keeps track of question index.
+     * @type {number}
+     */
+    this.questionIndex = this.questionIndex || 0;
+
+    /**
+     * Keeps track of user score.
+     * @type {number}
+     */
     this.userScore = 0;
+
+    /**
+     * Keeps track of geojson area country name.
+     * @type {string}
+     */
+    this.correctAnswerCountry = '';
+
+    /**
+     * Keeps track of nominatim queried country.
+     * @type {string}
+     */
+    this.userAnswerCountry = '';
+
+    /**
+     * Keeps track of max score.
+     * @type {number}
+     */
     this.maxPointsPerQuestion = 1000;
-    this.geoCountry = '';
     this.maxScore = this.maxPointsPerQuestion * this.options.questions.length;
+
+    /**
+     * Keeps track of leaflet map.
+     * @type {number}
+     */
     this.theMap = undefined;
+
+    /**
+     * Keeps track of leaflet map layers.
+     * @type {Object} Object containing L.marker or L.FeatureGroup
+     */
+    this.mapLayers = {
+      'userAnswerMarker': undefined,    //Keeps track of user answer map marker.
+      'correctAnswerMarker': undefined, //Keeps track of correct answer map marker.
+      'correctAnswerArea': undefined,   //Keeps track of correct answer map area.
+      'solution': undefined             //Keeps track of showed solution in the map.
+    };
+
     H5P.EventDispatcher.call(this);
     var self = this;
     this.on('resize', self.resize, self);
   }
-  GeoQuiz.prototype = Object.create(H5P.EventDispatcher.prototype);
+
+  GeoQuiz.prototype = Object.create(Question.prototype);
   GeoQuiz.prototype.constructor = GeoQuiz;
-  
+
   /**
-   * Append field to wrapper.
-   *
-   * @param {jQuery} $container
+   * Registers this question type's DOM elements before they are attached.
+   * Called from H5P.Question.
    */
-  GeoQuiz.prototype.attach = function ($container) {
+  GeoQuiz.prototype.registerDomElements = function () {
     var self = this;
-    this.questionIndex = 0;
+
+    // Register task introduction text
+    //self.setIntroduction(self.options.intro);
+
+    // Register task content area
+    self.setContent(this.createContent());
+  }
+
+  /**
+   * Create wrapper and main content for question.
+   * @returns {H5P.jQuery} Wrapper
+   */
+   GeoQuiz.prototype.createContent = function () {
+    //var self = this;
     this.defineMarkers();
+    this.$wrapper = $('<div>', {
+      'class': 'h5p-geoquiz'
+    })
     // Let's shuffle the questions
     this.options.questions = H5P.shuffleArray(this.options.questions);
-    this.$container = $container.addClass('h5p-geoquiz');
 
     this.$overlayContainer = $('<div/>', {
       'id': 'h5p-geoquiz-main-content'
-    }).appendTo($container);
+    }).appendTo(this.$wrapper);
     
     this.buildIntroductionPage(this.$overlayContainer);
-    this.buildQuestionPage($container);
-    this.buildAnswerPage($container);
-    this.buildFeedbackPage($container);
+    this.buildQuestionPage(this.$wrapper);
+    this.buildAnswerPage(this.$wrapper);
+    this.buildFeedbackPage(this.$wrapper);
 
     this.$mapContainer = $('<div/>', {
       'id': 'h5p-geoquiz-map-content'
-    }).appendTo($container);
+    }).appendTo(this.$wrapper);
 
     this.theMap = $('<div>', {
       'class': 'h5p-geoquiz-map',
@@ -53,9 +146,10 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     });
 
     this.$mapContainer.append(this.theMap);
-    this.$container.append(this.$overlayContainer);
-    this.$container.append(this.$mapContainer);
+    this.$wrapper.append(this.$overlayContainer);
+    this.$wrapper.append(this.$mapContainer);
     this.loadMap();
+    return this.$wrapper;
   };
 
   /**
@@ -125,6 +219,26 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
 
     this.scoreBar = new H5P.JoubelScoreBar(this.maxPointsPerQuestion);
     this.scoreBar.appendTo(answerContent);
+
+    // Add retry button, if enabled and as standalone task
+    var geoQuizButtons = $('<div/>', {
+      'id': 'h5p-geoquiz-buttons-container',
+      'class': 'child',
+    }).appendTo(answerContent);
+
+    // Add solutions button, if enabled and as standalone task
+    var enableSolutionsButton = this.options.behaviour.enableSolutionsButton;
+    if((enableSolutionsButton === true) && (this.contentData.standalone === true)){
+      JoubelUI.createButton({
+        'class': 'h5p-geoquiz-show-solution child',
+        'id': 'h5p-geoquiz-show-solution',
+        'html': this.options.showSolutionsBtnLabel,
+      }).click(function () {
+        self.showQuestionSolution();
+      }).appendTo(geoQuizButtons);
+    }
+
+    // Add next button
     JoubelUI.createButton({
       'class': 'h5p-geoquiz-next child',
       'id': 'h5p-geoquiz-next',
@@ -133,18 +247,8 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       self.questionIndex++;
       $('#h5p-geoquiz-answer-container').hide();
       self.showQuestion();
-    }).appendTo(answerContent);
-    
-    // Add retry button, if enabled
-    if(this.options.behaviour.enableSolutionsButton === true) {
-      JoubelUI.createButton({
-        'class': 'h5p-geoquiz-show-solution child',
-        'id': 'h5p-geoquiz-show-solution',
-        'html': this.options.showSolutionsBtnLabel,
-      }).click(function () {
-        self.showQuestionSolution();
-      }).appendTo(answerContent);
-    }      
+    }).appendTo(geoQuizButtons);
+
   }
 
   /**
@@ -152,28 +256,43 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
    */
   GeoQuiz.prototype.buildFeedbackPage = function (container) {
     var self = this;
+
     this.$feedbackContainer = $('<div/>', {
       'id': 'h5p-geoquiz-feedback-container'
     }).appendTo(container).hide();
+
     var feedbackInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-feedback-inner-container',
       'class': 'inner',
     }).appendTo(this.$feedbackContainer);
+
     var feedbackContent = $('<div/>', {
       'id': 'h5p-geoquiz-feedback-content',
       'class': 'child',
     }).appendTo(feedbackInnerContainer);
+
     var feedbackMessage = $('<p/>', {
       'id': 'h5p-geoquiz-feedback-content-message',
     }).appendTo(feedbackContent);
-    // Add retry button, if enabled
-    if(this.options.behaviour.enableRetry === true) {
+
+    // Add overall feedback score bar
+    this.overallFeedbackScoreBar = new H5P.JoubelScoreBar(this.getMaxScore());
+    this.overallFeedbackScoreBar.appendTo(feedbackContent);
+
+    // Add retry button, if enabled and as standalone task
+    var geoQuizButtons = $('<div/>', {
+      'id': 'h5p-geoquiz-buttons-container',
+      'class': 'child',
+    }).appendTo(feedbackContent);
+
+    var enableRetry = this.options.behaviour.enableRetry;
+    if((enableRetry === true) && (this.contentData.standalone === true)) {
       this.$retryButton = JoubelUI.createButton({
         'class': 'h5p-results-retry-button h5p-invisible h5p-button',
         'html': this.options.retryBtnLabel
       }).click(function () {
         self.resetTask();
-      }).appendTo(feedbackContent);
+      }).appendTo(geoQuizButtons);
     }
   }
   
@@ -182,36 +301,39 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
    */
   GeoQuiz.prototype.showQuestion = function () {
     var self = this;
+
+    // rebind click event
+    //self.map.on('click', self.addMarker, {geoquiz: self});
+
     // Reset stored informations
     self.scoreBar.setScore(0);
-    self.geoCountry = '';
-    if (self.$userMarker !== undefined) {
-      self.map.removeLayer(self.$userMarker);
-      self.$userMarker = undefined;
+    self.userAnswerCountry = '';
+    self.correctAnswerCountry = '';
+
+    if (self.mapLayers.userAnswerMarker !== undefined) {
+      self.map.removeLayer(self.mapLayers.userAnswerMarker);
+      self.mapLayers.userAnswerMarker = undefined;
     }
-    if (self.$answerMarker !== undefined) {
-      self.map.removeLayer(self.$answerMarker);
-      self.$answerMarker = undefined;
+    if (self.mapLayers.correctAnswerMarker !== undefined) {
+      self.map.removeLayer(self.mapLayers.correctAnswerMarker);
+      self.mapLayers.correctAnswerMarker = undefined;
     }
-    if (self.drawnItems !== undefined) {
-      self.map.removeLayer(self.drawnItems);
-      self.drawnItems = undefined;
+    if (self.mapLayers.correctAnswerArea !== undefined) {
+      self.map.removeLayer(self.mapLayers.correctAnswerArea);
+      self.mapLayers.correctAnswerArea = undefined;
     }
+    
+    self.triggerXAPI('interacted');
+
     // Check if we are at the end of the quiz or we have other questions
     if (self.questionIndex > (self.options.questions.length - 1) ) {
+      self.answered = true;
+
       // No questions left, add overall feedback using "You got @score of @total points"
-      var scoreText = self.options.overallFeedback.replace('@score', self.userScore).replace('@total', self.maxScore);
-      $('#h5p-geoquiz-feedback-content-message').html( scoreText );
-      $('#h5p-geoquiz-feedback-container').show();
-      self.triggerXAPIScored(self.userScore, self.maxScore, "done", true, true);
-      // Show/Hide retry button, if enabled
-      if(self.options.behaviour.enableRetry === true) {
-        if (self.userScore < self.maxScore) {
-          self.$retryButton.removeClass('h5p-invisible');
-        } else {
-          self.$retryButton.addClass('h5p-invisible');
-        }
-      }
+      self.showEvaluation();
+
+      // Trigger xAPI completed event
+      self.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'answered');
     } else {
       // Show next question
       $('#h5p-geoquiz-question-content').text(self.options.questions[self.questionIndex].text);
@@ -224,24 +346,72 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
    */
   GeoQuiz.prototype.resetTask = function () {
     var self = this;
+    self.answered = false;
+    self.userAnswerCountry = '';
+    self.correctAnswerCountry = '';
+    self.mapLayers.userAnswerMarker = undefined;
+    self.mapLayers.correctAnswerMarker = undefined;
+    self.mapLayers.correctAnswerArea = undefined;
+    self.mapLayers.solution = undefined;
     self.questionIndex = 0;
     self.userScore = 0;
     self.options.questions = H5P.shuffleArray(self.options.questions);
+    for (index in self.options.questions) {
+      var question = self.options.questions[index];
+      self.map.removeLayer(question.solution);
+    }
+    
     $('#h5p-geoquiz-feedback-container').hide();
     self.showQuestion();
   }
+
+  /**
+   * Show evaluation widget, i.e: 'You got x of y points'
+   */
+  GeoQuiz.prototype.showEvaluation = function () {
+    var self = this;
+    var maxScore = self.getMaxScore();
+    var score = self.getScore();
+    var scoreText = self.options.overallFeedback.replace('@score', score).replace('@total', maxScore);
+    
+    $('#h5p-geoquiz-feedback-content-message').html( scoreText );
+    self.overallFeedbackScoreBar.setScore(score);
+    $('#h5p-geoquiz-question-container').hide();
+    $('#h5p-geoquiz-feedback-container').css({'opacity':0}).show();
+    $('#h5p-geoquiz-feedback-container').animate({'opacity':1}, 300);
+
+    // Show/Hide retry button, if enabled
+    var enableRetry = self.options.behaviour.enableRetry;
+    if((enableRetry === true) && (self.contentData.standalone === true)) {
+      if (self.getScore() < self.getMaxScore()) {
+        self.$retryButton.removeClass('h5p-invisible');
+      } else {
+        self.$retryButton.addClass('h5p-invisible');
+      }
+    }
+    
+    self.trigger('resize');
+  };
 
   /**
    * Show solution for actual question
    */
   GeoQuiz.prototype.showQuestionSolution = function () {
     var self = this;
-    if (self.$answerMarker !== undefined) {
-      self.$answerMarker.addTo(self.map);
+    
+    $('#h5p-geoquiz-answer-content').css({'opacity':0});
+
+    // Add location answer if set
+    if (self.mapLayers.correctAnswerMarker !== undefined) {
+      self.mapLayers.correctAnswerMarker.addTo(self.map);
     }
-    if (self.drawnItems !== undefined) {
-      self.map.addLayer(self.drawnItems);
+
+    // Add area answer if set
+    if (self.mapLayers.correctAnswerArea !== undefined) {
+      self.map.addLayer(self.mapLayers.correctAnswerArea);
     }
+
+    $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800);
   }
 
   /**
@@ -255,32 +425,33 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     var self = this;
     var points = 0;
     var question = self.geoquiz.options.questions[self.geoquiz.questionIndex];
-    self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false });
+    self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false });
     if (question.locationType === 'location') {
       var latlng = self.geoquiz.coordSplit(question.typeLocation);
       // Store right answer as a leaflet marker
-      self.geoquiz.$answerMarker = L.marker(latlng, { draggable: false });
-      /*if (self.geoquiz.options.behaviour.enableSolutionsButton === true) {
-        self.geoquiz.$answerMarker.addTo(self.geoquiz.map);
-      }*/
+      self.geoquiz.mapLayers.correctAnswerMarker = L.marker(latlng, { draggable: false });
+      question.solution = self.geoquiz.mapLayers.correctAnswerMarker;
+      question.solution.bindTooltip(question.locationLabel);
       var distance = parseInt(latlng.distanceTo(event.latlng) / 1000);
       points = (self.geoquiz.maxPointsPerQuestion - distance);
       if (points < 0) {
         points = 0;
       }
-      // Store user answer as a leaflet marker
+      // Store user answer as a leaflet marker with icon
       var answerIcon = self.geoquiz.whichMarker(points);
-      self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
+      self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
       self.geoquiz.updateScore(points);
     } else if (question.locationType === 'area') {
       var area = self.geoquiz.options.questions[self.geoquiz.questionIndex].typeArea;
-      self.geoquiz.isMarkerInsideArea(area, self.geoquiz.$userMarker).then(function (response) {
-        if (self.geoquiz.userCountry === self.geoquiz.geoCountry) {
+      self.geoquiz.isMarkerInsideArea(area, self.geoquiz.mapLayers.userAnswerMarker).then(function (response) {
+        if (self.geoquiz.userAnswerCountry === self.geoquiz.correctAnswerCountry) {
           points = parseInt(self.geoquiz.maxPointsPerQuestion);
         }
-        // Store user answer as a leaflet marker
+        question.solution = self.geoquiz.mapLayers.correctAnswerArea;
+        question.solution.bindTooltip(question.locationLabel);
+        // Store user answer as a leaflet marker with icon
         var answerIcon = self.geoquiz.whichMarker(points);
-        self.geoquiz.$userMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
+        self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
         self.geoquiz.updateScore(points);
       });
     }
@@ -294,8 +465,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
    */  
    GeoQuiz.prototype.isMarkerInsideArea = function (area, marker) {
     var self = this;
+    self.mapLayers.correctAnswerArea = undefined;
     return new Promise(function(resolve, reject) {
-      self.loadArea( area ).then(function(loadAreaResponse) {
+      self.loadArea(area).then(function(loadAreaResponse) {
         self.getNominatimCountry(marker).then(function (getNominatimCountryResponse) {
           resolve("isMarkerInsideArea worked!");
         });
@@ -312,20 +484,17 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     var self = this;
     return new Promise(function(resolve, reject) {
       setTimeout(function() {
-        self.geoCountry = '';
+        self.correctAnswerCountry = '';
         $.getJSON( self.getLibraryFilePath('') + "geojson-data/" + area + ".geo.json")
           .done(function( json ) {
-            self.drawnItems = new L.FeatureGroup();
+            self.mapLayers.correctAnswerArea = new L.FeatureGroup();
             var geojsonLayer = L.geoJson(json);
             geojsonLayer.eachLayer(
               function(l){
-                self.geoCountry = l.feature.properties.name;
-                self.drawnItems.addLayer(l);
+                self.correctAnswerCountry = l.feature.properties.name;
+                self.mapLayers.correctAnswerArea.addLayer(l);
               }
             );
-            /*if (self.options.behaviour.enableSolutionsButton === true) {
-              self.map.addLayer(self.drawnItems);
-            }*/
             resolve("loadArea worked!");
           })
           .fail(function( jqxhr, textStatus, error ) {
@@ -345,7 +514,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.getNominatimCountry = function (marker) {
     var self = this;
     var x = marker.getLatLng().lat, y = marker.getLatLng().lng;
-    self.userCountry = 'Unknow';
+    self.userAnswerCountry = 'Unknow';
     return new Promise(function(resolve, reject) {
       // Force language to en to match geojson naming
       var url = "https://nominatim.openstreetmap.org/search?q="+x+","+y+"&format=json&addressdetails=1&accept-language=en";
@@ -353,7 +522,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
           .done(function( data ) {
             var queryCountry = '';
             $.each( data, function( key, val ) {
-              self.userCountry = val.address.country;
+              self.userAnswerCountry = val.address.country;
             });
             resolve("getNominatimCountry worked!");
             //
@@ -376,8 +545,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
     this.userScore += points;
     this.scoreBar.setScore(points);
     $('#h5p-geoquiz-question-container').hide();
-    $('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
-    $('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
+    $('#h5p-geoquiz-answer-container').show();
+    //$('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
+    //$('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
   }
   
 
@@ -399,20 +569,6 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.resize = function () {
     var self = this;
     self.setContainerHeight();
-    setTimeout(function () {
-      if (H5P.isFramed === true) {
-        var checkHeight = setInterval(function(){
-          var frameId = 'h5p-iframe-' + H5P.instances[0].contentId;
-          var containerHeight = parseInt($('.h5p-geoquiz').height()) + parseInt($('.h5p-actions').height());
-          var frameHeight = window.parent.jQuery('#' + frameId).height();
-          if(containerHeight !== frameHeight) {
-            window.parent.jQuery('#' + frameId).height(containerHeight);
-          } else {
-            clearInterval(checkHeight);
-          }
-        }, 10);
-      }
-    }, 10);
   };  
 
   GeoQuiz.prototype.coordSplit = function (text) {
@@ -429,7 +585,7 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       self.map = L.map('h5p-geoquiz-map', { zoomControl:false });
       var latlng = self.coordSplit(self.options.mapCenter);
       self.map.setView(latlng, self.options.mapZoom);
-      self.map.on('click', self.addMarker, {geoquiz: self});    
+      self.map.on('click', self.addMarker, {geoquiz: self});
 
       switch (self.options.mapType) {
         case 'CartoDB.VoyagerNoLabels':
@@ -485,13 +641,13 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.whichMarker = function (points) {
     var percent = parseInt((points / this.maxPointsPerQuestion) * 100);
     if (percent <= 25) {
-      return this.redIcon;
+      return this.icons.red;
     } else if (percent <= 50) {
-      return this.orangeIcon;
+      return this.icons.orange;
     } else if (percent <= 75) {
-      return this.yellowIcon;
+      return this.icons.yellow;
     } else if (percent > 75) {
-      return this.greenIcon;
+      return this.icons.green;
     }
   }
 
@@ -501,8 +657,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
   GeoQuiz.prototype.defineMarkers = function () {
     // Create the answer marker icons
     var imgPath = this.getLibraryFilePath('') + 'css/images/';
+
     // more then 75%
-    this.greenIcon = new L.Icon({
+    var greenIcon = new L.Icon({
       iconUrl: imgPath + 'marker-icon-2x-green.png',
       shadowUrl: imgPath + 'marker-shadow.png',
       iconSize: [25, 41],
@@ -510,8 +667,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       popupAnchor: [1, -34],
       shadowSize: [41, 41]
     });
+
     // less then 75%
-    this.yellowIcon = new L.Icon({
+    var yellowIcon = new L.Icon({
       iconUrl: imgPath + 'marker-icon-2x-yellow.png',
       shadowUrl: imgPath + 'marker-shadow.png',
       iconSize: [25, 41],
@@ -519,8 +677,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       popupAnchor: [1, -34],
       shadowSize: [41, 41]
     });
+
     // less then 50%
-    this.orangeIcon = new L.Icon({
+    var orangeIcon = new L.Icon({
       iconUrl: imgPath + 'marker-icon-2x-orange.png',
       shadowUrl: imgPath + 'marker-shadow.png',
       iconSize: [25, 41],
@@ -528,8 +687,9 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       popupAnchor: [1, -34],
       shadowSize: [41, 41]
     });
+
     // less then 25%
-    this.redIcon = new L.Icon({
+    var redIcon = new L.Icon({
       iconUrl: imgPath + 'marker-icon-2x-red.png',
       shadowUrl: imgPath + 'marker-shadow.png',
       iconSize: [25, 41],
@@ -537,7 +697,58 @@ H5P.GeoQuiz = (function ($, JoubelUI) {
       popupAnchor: [1, -34],
       shadowSize: [41, 41]
     });
+    
+    this.icons = {
+      'green': greenIcon,
+      'yellow': yellowIcon,
+      'orange': orangeIcon,
+      'red': redIcon
+    }
   }
 
+  /**
+   * The following functions implements the Question type contract
+   */
+
+   /**
+   * Checks if all has been answered.
+   *
+   * @returns {Boolean}
+   */
+   GeoQuiz.prototype.getAnswerGiven = function () {
+    if (this.answered) {
+      return true;
+    }
+    return false;
+  };
+
+  GeoQuiz.prototype.getScore = function () {
+    return this.userScore;
+  };
+
+  GeoQuiz.prototype.getMaxScore = function () {
+    return this.maxScore;
+  };
+
+  GeoQuiz.prototype.getTitle = function () {
+    var title = '';
+    // if the are still questions, use it as title
+    if (this.questionIndex <= (this.options.questions.length - 1) ) {
+      var question = this.options.questions[this.questionIndex];
+      title = question.text ? H5P.createTitle(question.text) : '';
+    }
+    return title;
+  };
+
+  // TODO:
+  GeoQuiz.prototype.showSolutions = function () {
+    var self = this;
+    this.$feedbackContainer.hide();
+    for (index in this.options.questions) {
+      var question = this.options.questions[index];
+      question.solution.addTo(this.map);
+    }
+  };
+
   return GeoQuiz;
-})(H5P.jQuery, H5P.JoubelUI);
+})(H5P.jQuery, H5P.JoubelUI, H5P.Question);

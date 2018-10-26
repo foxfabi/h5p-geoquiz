@@ -1,3 +1,7 @@
+.h5p-geoquiz div.h5p-question-content {
+  margin: 0;
+}
+
 #h5p-geoquiz-map-content .leaflet-grab {
   cursor: crosshair;
 }
@@ -23,7 +27,13 @@
   font-weight: bold;
   font-size: 1.2em;
 }
+#h5p-geoquiz-buttons-container {
+  display: inline-block;
+  margin-top: 1em;
+  width: 100%;
+}
 
+}
 #h5p-geoquiz-answer-content .h5p-joubelui-button {
   margin: 0 0 0.5em 0.5em;
 }

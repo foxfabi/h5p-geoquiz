@@ -3,7 +3,7 @@
   "description": "Create a Quiz on wich the users click on a leaflet map to answer the questions.",
   "majorVersion": 1,
   "minorVersion": 1,
-  "patchVersion": 3,
+  "patchVersion": 4,
   "runnable": 1,
   "fullscreen": 0,
   "embedTypes": [
@@ -35,6 +35,11 @@
   "preloadedDependencies": [
     {
       "machineName": "H5P.JoubelUI",
+      "majorVersion": 1,
+      "minorVersion": 3
+    },
+    {
+      "machineName": "H5P.Question",
       "majorVersion": 1,
       "minorVersion": 3
     }
