@@ -1,6 +1,6 @@
 var H5P = H5P || {};
 
-H5P.GeoQuiz = (function ($, JoubelUI, Question) {
+H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
   /**
    * @constructor
    * @extends Question
@@ -41,7 +41,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
      * Keeps track of task finished state.
      * @type {boolean}
      */
-    this.answered = false;
+    this.completed = false;
 
     /**
      * Keeps track of question index.
@@ -87,8 +87,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     this.mapLayers = {
       'userAnswerMarker': undefined,    //Keeps track of user answer map marker.
       'correctAnswerMarker': undefined, //Keeps track of correct answer map marker.
-      'correctAnswerArea': undefined,   //Keeps track of correct answer map area.
-      'solution': undefined             //Keeps track of showed solution in the map.
+      'correctAnswerArea': undefined   //Keeps track of correct answer map area.
     };
 
     H5P.EventDispatcher.call(this);
@@ -327,43 +326,19 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
 
     // Check if we are at the end of the quiz or we have other questions
     if (self.questionIndex > (self.options.questions.length - 1) ) {
-      self.answered = true;
+      self.completed = true;
 
-      // No questions left, add overall feedback using "You got @score of @total points"
+      // No questions left, show overall feedback
       self.showEvaluation();
 
       // Trigger xAPI completed event
-      self.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'answered');
+      self.triggerXAPICompleted();
     } else {
       // Show next question
       $('#h5p-geoquiz-question-content').text(self.options.questions[self.questionIndex].text);
       $('#h5p-geoquiz-question-container').show();
     }
   };
-
-  /**
-   * Restart quiz
-   */
-  GeoQuiz.prototype.resetTask = function () {
-    var self = this;
-    self.answered = false;
-    self.userAnswerCountry = '';
-    self.correctAnswerCountry = '';
-    self.mapLayers.userAnswerMarker = undefined;
-    self.mapLayers.correctAnswerMarker = undefined;
-    self.mapLayers.correctAnswerArea = undefined;
-    self.mapLayers.solution = undefined;
-    self.questionIndex = 0;
-    self.userScore = 0;
-    self.options.questions = H5P.shuffleArray(self.options.questions);
-    for (index in self.options.questions) {
-      var question = self.options.questions[index];
-      self.map.removeLayer(question.solution);
-    }
-    
-    $('#h5p-geoquiz-feedback-container').hide();
-    self.showQuestion();
-  }
 
   /**
    * Show evaluation widget, i.e: 'You got x of y points'
@@ -424,6 +399,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   GeoQuiz.prototype.addMarker = function (event) {
     var self = this;
     var points = 0;
+    var isCorrect = false;
     var question = self.geoquiz.options.questions[self.geoquiz.questionIndex];
     self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false });
     if (question.locationType === 'location') {
@@ -439,13 +415,19 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       }
       // Store user answer as a leaflet marker with icon
       var answerIcon = self.geoquiz.whichMarker(points);
+      if (answerIcon === self.geoquiz.icons.greenIcon) {
+        isCorrect = true;
+      }
       self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
       self.geoquiz.updateScore(points);
+      // Trigger xAPI answered event
+      self.geoquiz.triggerXAPIAnswered(isCorrect, points);
     } else if (question.locationType === 'area') {
       var area = self.geoquiz.options.questions[self.geoquiz.questionIndex].typeArea;
       self.geoquiz.isMarkerInsideArea(area, self.geoquiz.mapLayers.userAnswerMarker).then(function (response) {
         if (self.geoquiz.userAnswerCountry === self.geoquiz.correctAnswerCountry) {
           points = parseInt(self.geoquiz.maxPointsPerQuestion);
+          isCorrect = true;
         }
         question.solution = self.geoquiz.mapLayers.correctAnswerArea;
         question.solution.bindTooltip(question.locationLabel);
@@ -453,8 +435,11 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
         var answerIcon = self.geoquiz.whichMarker(points);
         self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
         self.geoquiz.updateScore(points);
+        // Trigger xAPI answered event
+        self.geoquiz.triggerXAPIAnswered(isCorrect, points);
       });
     }
+    
   };
 
   /**
@@ -569,11 +554,18 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   GeoQuiz.prototype.resize = function () {
     var self = this;
     self.setContainerHeight();
-  };  
+  };
 
+  /**
+   * Split coordinate text field and build L.latlng
+   */
   GeoQuiz.prototype.coordSplit = function (text) {
-    var res = text.split(",");
-    return L.latLng(res[0], res[1]);
+    try {
+      var res = text.split(",");
+      return L.latLng(res[0], res[1]);
+    } catch (error) {
+      console.log(error);
+    }
   }
   
   /**
@@ -711,25 +703,43 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
    */
 
    /**
-   * Checks if all has been answered.
+   * Checks if the task has been completed.
+   * Used for contracts.
    *
    * @returns {Boolean}
    */
    GeoQuiz.prototype.getAnswerGiven = function () {
-    if (this.answered) {
+    if (this.completed) {
       return true;
     }
     return false;
   };
 
+  /**
+   * Returns the user's score for this task
+   * Used for contracts.
+   *
+   * @returns {Number}
+   */
   GeoQuiz.prototype.getScore = function () {
     return this.userScore;
   };
 
+  /**
+   * Returns the maximum amount of points achievable for this task.
+   * Used for contracts.
+   *
+   * @returns {Number}
+   */
   GeoQuiz.prototype.getMaxScore = function () {
     return this.maxScore;
   };
 
+  /**
+   * Returns the current question text.
+   *
+   * @returns {String}
+   */
   GeoQuiz.prototype.getTitle = function () {
     var title = '';
     // if the are still questions, use it as title
@@ -740,7 +750,10 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     return title;
   };
 
-  // TODO:
+  /**
+   * Displays the solution(s) for this task
+   * Used for contracts.
+   */
   GeoQuiz.prototype.showSolutions = function () {
     var self = this;
     this.$feedbackContainer.hide();
@@ -748,6 +761,123 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       var question = this.options.questions[index];
       question.solution.addTo(this.map);
     }
+  };
+
+  /**
+   * Resets the task to its initial state
+   * Used for contracts.
+   */
+  GeoQuiz.prototype.resetTask = function () {
+    var self = this;
+    self.completed = false;
+    self.userAnswerCountry = '';
+    self.correctAnswerCountry = '';
+    self.mapLayers.userAnswerMarker = undefined;
+    self.mapLayers.correctAnswerMarker = undefined;
+    self.mapLayers.correctAnswerArea = undefined;
+    self.mapLayers.solution = undefined;
+    self.questionIndex = 0;
+    self.userScore = 0;
+    self.options.questions = H5P.shuffleArray(self.options.questions);
+    for (index in self.options.questions) {
+      var question = self.options.questions[index];
+      self.map.removeLayer(question.solution);
+    }
+    
+    $('#h5p-geoquiz-feedback-container').hide();
+    self.showQuestion();
+  }
+
+  /**
+   * Create and trigger xAPI event 'completed'
+   */
+  GeoQuiz.prototype.triggerXAPICompleted = function () {
+    this.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'completed', true, true);
+  };
+  
+  /**
+   * Creates and triggers the xAPI answered event
+   *
+   * @method triggerXAPIAnswered
+   * @private
+   * @fires xAPIEvent
+   */
+  GeoQuiz.prototype.triggerXAPIAnswered = function (isCorrect, score) {
+    var xAPIEvent = this.createXAPIEventTemplate('answered');
+    var userResponse = this.mapLayers.userAnswerMarker;
+    this.addQuestionToXAPI(xAPIEvent);
+    this.addResponseToXAPI(xAPIEvent, isCorrect, score, userResponse.toGeoJSON());
+    this.trigger(xAPIEvent);
+  };
+
+  /**
+   * Add the question itself to the definition part of an xAPIEvent
+   *
+   * @method addQuestionToXAPI
+   * @param {XAPIEvent} xAPIEvent
+   * @private
+   */
+  GeoQuiz.prototype.addQuestionToXAPI = function(xAPIEvent) {
+    var definition = xAPIEvent.getVerifiedStatementValue(['object', 'definition']);
+    var question = this.options.questions[this.questionIndex];
+    var correctResponses = '';
+    console.log(question);
+    definition.description = {
+      // Remove tags, must wrap in div tag because jQuery 1.9 will crash if the string isn't wrapped in a tag.
+      'en-US': $('<div>' + question.text + '</div>').text()
+    };
+    definition.type = 'http://adlnet.gov/expapi/activities/cmi.interaction';
+    definition.interactionType = 'other';
+    
+    definition.correctResponsesPattern = [question.solution.toGeoJSON()];
+  };
+
+  /**
+   * Add the response part to an xAPI event
+   *
+   * @method addResponseToXAPI
+   * @private
+   * @param {H5P.XAPIEvent} The xAPI event we will add a response to
+   * @param {Boolean} isCorrect
+   * @param {Number} score
+   * @param {String} GeoJSON encoded userResponse marker
+   */
+  GeoQuiz.prototype.addResponseToXAPI = function(xAPIEvent, isCorrect, score, userResponse) {
+    xAPIEvent.setScoredResult(score, this.maxPointsPerQuestion, self, true, isCorrect);
+    xAPIEvent.data.statement.result.response = userResponse;
+  };
+
+  /**
+   * TODO: Retrieves the xAPI data necessary for generating result reports
+   * See: https://github.com/h5p/h5p-true-false/blob/master/scripts/h5p-true-false.js#L174-L177
+   * Used for contracts.
+   */
+  GeoQuiz.prototype.getXAPIData = function () {
+    var xAPIEvent = this.createXAPIEventTemplate('answered');
+    // Add the question itself to the definition part of an xAPIEvent
+    var definition = xAPIEvent.getVerifiedStatementValue(['object', 'definition']);
+    $.extend(definition, this.getxAPIDefinition());
+    this.addResponseToXAPI(xAPIEvent);
+    return {
+      statement: xAPIEvent.data.statement
+    };    
+  }
+
+  /**
+   * Generate xAPI object definition used in xAPI statements.
+   * @return {Object}
+   */
+  GeoQuiz.prototype.getxAPIDefinition = function () {
+    var question = this.options.questions[this.questionIndex];
+    var definition = {};
+    definition.interactionType = 'other';
+    definition.type = 'http://adlnet.gov/expapi/activities/cmi.interaction';
+    definition.description = {
+      'en-US': $('<div>' + question.text + '</div>').text()
+    };
+    definition.correctResponsesPattern = [question.solution.toGeoJSON()];
+
+    return definition;
   };
 
   return GeoQuiz;
