@@ -1,6 +1,6 @@
 var H5P = H5P || {};
 
-H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
+H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   /**
    * @constructor
    * @extends Question
@@ -117,7 +117,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
    * @returns {H5P.jQuery} Wrapper
    */
    GeoQuiz.prototype.createContent = function () {
-    //var self = this;
     this.defineMarkers();
     this.$wrapper = $('<div>', {
       'class': 'h5p-geoquiz'
@@ -193,7 +192,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
 
     var questionInnerContainer = $('<div/>', {
       'id': 'h5p-geoquiz-question-content',
-      //'class': 'inner',
     }).appendTo(this.$questionContainer);
   }
 
@@ -328,9 +326,10 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
     if (self.questionIndex > (self.options.questions.length - 1) ) {
       self.completed = true;
 
+
       // No questions left, show overall feedback
       self.showEvaluation();
-
+      self.trigger('resize');
       // Trigger xAPI completed event
       self.triggerXAPICompleted();
     } else {
@@ -398,6 +397,9 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
    // Leaflet's default projection is EPSG:3857, also known as "Google Mercator" or "Web Mercator"
   GeoQuiz.prototype.addMarker = function (event) {
     var self = this;
+    if (self.geoquiz.completed === true) {
+      return;
+    }
     var points = 0;
     var isCorrect = false;
     var question = self.geoquiz.options.questions[self.geoquiz.questionIndex];
@@ -408,6 +410,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
       self.geoquiz.mapLayers.correctAnswerMarker = L.marker(latlng, { draggable: false });
       question.solution = self.geoquiz.mapLayers.correctAnswerMarker;
       question.solution.bindTooltip(question.locationLabel);
+
       var distance = parseInt(latlng.distanceTo(event.latlng) / 1000);
       points = (self.geoquiz.maxPointsPerQuestion - distance);
       if (points < 0) {
@@ -418,23 +421,32 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
       if (answerIcon === self.geoquiz.icons.greenIcon) {
         isCorrect = true;
       }
+
       self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
+
       self.geoquiz.updateScore(points);
+
       // Trigger xAPI answered event
       self.geoquiz.triggerXAPIAnswered(isCorrect, points);
     } else if (question.locationType === 'area') {
       var area = self.geoquiz.options.questions[self.geoquiz.questionIndex].typeArea;
       self.geoquiz.isMarkerInsideArea(area, self.geoquiz.mapLayers.userAnswerMarker).then(function (response) {
+
         if (self.geoquiz.userAnswerCountry === self.geoquiz.correctAnswerCountry) {
           points = parseInt(self.geoquiz.maxPointsPerQuestion);
           isCorrect = true;
         }
+
         question.solution = self.geoquiz.mapLayers.correctAnswerArea;
         question.solution.bindTooltip(question.locationLabel);
+
         // Store user answer as a leaflet marker with icon
         var answerIcon = self.geoquiz.whichMarker(points);
+
         self.geoquiz.mapLayers.userAnswerMarker = L.marker(event.latlng, { draggable: false, icon: answerIcon }).addTo(self.geoquiz.map);
+
         self.geoquiz.updateScore(points);
+
         // Trigger xAPI answered event
         self.geoquiz.triggerXAPIAnswered(isCorrect, points);
       });
@@ -530,9 +542,8 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
     this.userScore += points;
     this.scoreBar.setScore(points);
     $('#h5p-geoquiz-question-container').hide();
-    $('#h5p-geoquiz-answer-container').show();
-    //$('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
-    //$('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
+    $('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
+    $('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
   }
   
 
@@ -709,7 +720,8 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
    * @returns {Boolean}
    */
    GeoQuiz.prototype.getAnswerGiven = function () {
-    if (this.completed) {
+    console.log('getAnswerGiven : ' + this.completed);
+    if (this.completed === true) {
       return true;
     }
     return false;
@@ -783,16 +795,15 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
       var question = self.options.questions[index];
       self.map.removeLayer(question.solution);
     }
-    
     $('#h5p-geoquiz-feedback-container').hide();
     self.showQuestion();
   }
 
   /**
-   * Create and trigger xAPI event 'completed'
+   * Create and trigger xAPI event 'answered'
    */
   GeoQuiz.prototype.triggerXAPICompleted = function () {
-    this.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'completed', true, true);
+    this.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'answered', true, true);
   };
   
   /**
@@ -821,14 +832,12 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
     var definition = xAPIEvent.getVerifiedStatementValue(['object', 'definition']);
     var question = this.options.questions[this.questionIndex];
     var correctResponses = '';
-    console.log(question);
     definition.description = {
       // Remove tags, must wrap in div tag because jQuery 1.9 will crash if the string isn't wrapped in a tag.
       'en-US': $('<div>' + question.text + '</div>').text()
     };
     definition.type = 'http://adlnet.gov/expapi/activities/cmi.interaction';
     definition.interactionType = 'other';
-    
     definition.correctResponsesPattern = [question.solution.toGeoJSON()];
   };
 
@@ -858,6 +867,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question, XApiEventBuilder) {
     var definition = xAPIEvent.getVerifiedStatementValue(['object', 'definition']);
     $.extend(definition, this.getxAPIDefinition());
     this.addResponseToXAPI(xAPIEvent);
+    console.log(xAPIEvent);
     return {
       statement: xAPIEvent.data.statement
     };    
