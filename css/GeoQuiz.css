@@ -5,6 +5,7 @@
 #h5p-geoquiz-map-content .leaflet-grab {
   cursor: crosshair;
 }
+
 #h5p-geoquiz-feedback-container,
 #h5p-geoquiz-answer-container,
 #h5p-geoquiz-question-container,
@@ -27,21 +28,23 @@
   font-weight: bold;
   font-size: 1.2em;
 }
+
 #h5p-geoquiz-buttons-container {
   display: inline-block;
   margin-top: 1em;
   width: 100%;
 }
 
-}
 #h5p-geoquiz-answer-content .h5p-joubelui-button {
   margin: 0 0 0.5em 0.5em;
 }
+
 .inner {
   display: table;
   width: 100%;
   height: 100%;
 }
+
 .child {
   display: table-cell;
   vertical-align: middle;
