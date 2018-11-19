@@ -550,7 +550,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   GeoQuiz.prototype.setContainerHeight = function() {
     var containerWidth = $('.h5p-geoquiz').width();
     var offset = parseInt($('.h5p-actions').height());
-    var containerHeight = parseInt(Math.round(containerWidth / 21 * 9)) - offset;
+    var containerHeight = parseInt(Math.round(containerWidth / 16 * 9)) - offset;
     $('#h5p-geoquiz-map').height(containerHeight);
     $('#h5p-geoquiz-intro-container').height(containerHeight);
     $('#h5p-geoquiz-feedback-container').height(containerHeight);
@@ -720,7 +720,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
    * @returns {Boolean}
    */
    GeoQuiz.prototype.getAnswerGiven = function () {
-    console.log('getAnswerGiven : ' + this.completed);
     if (this.completed === true) {
       return true;
     }
@@ -800,7 +799,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   }
 
   /**
-   * Create and trigger xAPI event 'answered'
+   * Create and trigger xAPI event 'completed'
    */
   GeoQuiz.prototype.triggerXAPICompleted = function () {
     this.triggerXAPIScored(this.getScore(), this.getMaxScore(), 'answered', true, true);
@@ -867,7 +866,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     var definition = xAPIEvent.getVerifiedStatementValue(['object', 'definition']);
     $.extend(definition, this.getxAPIDefinition());
     this.addResponseToXAPI(xAPIEvent);
-    console.log(xAPIEvent);
     return {
       statement: xAPIEvent.data.statement
     };    
