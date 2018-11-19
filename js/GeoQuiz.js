@@ -372,7 +372,10 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
    */
   GeoQuiz.prototype.showQuestionSolution = function () {
     var self = this;
-    
+    // Reset map center and zoom level
+    var latlng = self.coordSplit(self.options.mapCenter);
+    self.map.setView(latlng, self.options.mapZoom);
+
     $('#h5p-geoquiz-answer-content').css({'opacity':0});
 
     // Add location answer if set
