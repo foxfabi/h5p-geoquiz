@@ -22,32 +22,11 @@
   },
   {
     "name": "mapType",
-    "type": "select",
+    "type": "text",
     "label": "Map type",
-    "description": "Choose the map type to use in this quiz.",
-    "options": [
-      {
-        "value": "CartoDB.VoyagerNoLabels",
-        "label": "CartoDB - VoyagerNoLabels"
-      },
-      {
-        "value": "Hydda.Base",
-        "label": "Hydda - Base"
-      },
-      {
-        "value": "Stamen.Watercolor",
-        "label": "Stamen - Watercolor"
-      },
-      {
-        "value": "Stamen.TerrainBackground",
-        "label": "Stamen - TerrainBackground"
-      },
-      {
-        "value": "Esri.WorldImagery",
-        "label": "Esri - WorldImagery"
-      }
-    ],
-    "default": "CartoDB.VoyagerNoLabels"
+    "widget": "mapSelector",
+    "default": "Hydda.Base",
+    "description": "Choose the map type to use in this quiz."
   },
   {
     "name": "mapCenter",
