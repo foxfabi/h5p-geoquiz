@@ -87,7 +87,8 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     this.mapLayers = {
       'userAnswerMarker': undefined,    //Keeps track of user answer map marker.
       'correctAnswerMarker': undefined, //Keeps track of correct answer map marker.
-      'correctAnswerArea': undefined   //Keeps track of correct answer map area.
+      'correctAnswerArea': undefined,   //Keeps track of correct answer map area.
+      'solutionDistanceLine': undefined   //Keeps track of line between user marker and correct marker.
     };
 
     H5P.EventDispatcher.call(this);
@@ -245,7 +246,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       $('#h5p-geoquiz-answer-container').hide();
       self.showQuestion();
     }).appendTo(geoQuizButtons);
-
   }
 
   /**
@@ -304,9 +304,9 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     self.userAnswerCountry = '';
     self.correctAnswerCountry = '';
 
-    if (self.mapLayers.solutionLine !== undefined) {
-      self.map.removeLayer(self.mapLayers.solutionLine);
-      self.mapLayers.solutionLine = undefined;
+    if (self.mapLayers.solutionDistanceLine !== undefined) {
+      self.map.removeLayer(self.mapLayers.solutionDistanceLine);
+      self.mapLayers.solutionDistanceLine = undefined;
     }
     if (self.mapLayers.userAnswerMarker !== undefined) {
       self.map.removeLayer(self.mapLayers.userAnswerMarker);
@@ -389,14 +389,13 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
         self.mapLayers.userAnswerMarker.getLatLng(),
         self.mapLayers.correctAnswerMarker.getLatLng()
       ];
-      
-      self.mapLayers.solutionLine = new L.polyline(pointList, {
+      self.mapLayers.solutionDistanceLine = new L.polyline(pointList, {
         color: 'red',
         weight: 3,
         opacity: 0.7,
         smoothFactor: 1
       });
-      self.mapLayers.solutionLine.addTo(self.map);
+      self.mapLayers.solutionDistanceLine.addTo(self.map);
     }
 
     // Add area answer if set
@@ -404,8 +403,17 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       self.map.addLayer(self.mapLayers.correctAnswerArea);
     }
 
-    $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800);
-
+    $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800, function() {
+      if (self.mapLayers.solutionDistanceLine !== undefined) {
+        // Remove old line
+        self.map.removeLayer(self.mapLayers.solutionDistanceLine);
+        self.mapLayers.solutionDistanceLine = undefined;
+      }
+      // Add the user answer marker
+      if (self.mapLayers.userAnswerMarker !== undefined) {
+        self.map.addLayer(self.mapLayers.userAnswerMarker);
+      }
+    });
   }
 
   /**
@@ -471,8 +479,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
         // Trigger xAPI answered event
         self.geoquiz.triggerXAPIAnswered(isCorrect, points);
       });
-    }
-    
+    }   
   };
 
   /**
@@ -550,7 +557,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
             console.log( "Request Failed: " + err );
             reject(Error("getNominatimCountry broke"));
           });
-
     });
   }
 
@@ -566,8 +572,10 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     $('#h5p-geoquiz-answer-container').css({'opacity':0}).show();
     $('#h5p-geoquiz-answer-container').animate({'opacity':1}, 800);
   }
-  
 
+  /**
+   * Sets container height as ratio of 16:9 to container width.
+   */
   GeoQuiz.prototype.setContainerHeight = function() {
     var containerWidth = $('.h5p-geoquiz').width();
     var offset = parseInt($('.h5p-actions').height());
@@ -818,6 +826,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     self.mapLayers.userAnswerMarker = undefined;
     self.mapLayers.correctAnswerMarker = undefined;
     self.mapLayers.correctAnswerArea = undefined;
+    self.mapLayers.solutionDistanceLine = undefined;
     self.mapLayers.solution = undefined;
     self.questionIndex = 0;
     self.userScore = 0;
