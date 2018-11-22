@@ -299,14 +299,15 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   GeoQuiz.prototype.showQuestion = function () {
     var self = this;
 
-    // rebind click event
-    //self.map.on('click', self.addMarker, {geoquiz: self});
-
     // Reset stored informations
     self.scoreBar.setScore(0);
     self.userAnswerCountry = '';
     self.correctAnswerCountry = '';
 
+    if (self.mapLayers.solutionLine !== undefined) {
+      self.map.removeLayer(self.mapLayers.solutionLine);
+      self.mapLayers.solutionLine = undefined;
+    }
     if (self.mapLayers.userAnswerMarker !== undefined) {
       self.map.removeLayer(self.mapLayers.userAnswerMarker);
       self.mapLayers.userAnswerMarker = undefined;
@@ -325,8 +326,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     // Check if we are at the end of the quiz or we have other questions
     if (self.questionIndex > (self.options.questions.length - 1) ) {
       self.completed = true;
-
-
       // No questions left, show overall feedback
       self.showEvaluation();
       self.trigger('resize');
@@ -381,6 +380,23 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     // Add location answer if set
     if (self.mapLayers.correctAnswerMarker !== undefined) {
       self.mapLayers.correctAnswerMarker.addTo(self.map);
+      // Remove the user answer marker
+      if (self.mapLayers.userAnswerMarker !== undefined) {
+        self.map.removeLayer(self.mapLayers.userAnswerMarker);
+      }
+      // Add a line to show distance to correct answer
+      var pointList = [
+        self.mapLayers.userAnswerMarker.getLatLng(),
+        self.mapLayers.correctAnswerMarker.getLatLng()
+      ];
+      
+      self.mapLayers.solutionLine = new L.polyline(pointList, {
+        color: 'red',
+        weight: 3,
+        opacity: 0.7,
+        smoothFactor: 1
+      });
+      self.mapLayers.solutionLine.addTo(self.map);
     }
 
     // Add area answer if set
@@ -389,6 +405,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     }
 
     $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800);
+
   }
 
   /**
@@ -410,7 +427,8 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     if (question.locationType === 'location') {
       var latlng = self.geoquiz.coordSplit(question.typeLocation);
       // Store right answer as a leaflet marker
-      self.geoquiz.mapLayers.correctAnswerMarker = L.marker(latlng, { draggable: false });
+      self.geoquiz.mapLayers.correctAnswerMarker = L.marker(latlng, { draggable: false, icon: self.geoquiz.icons.blue });
+      
       question.solution = self.geoquiz.mapLayers.correctAnswerMarker;
       question.solution.bindTooltip(question.locationLabel);
 
@@ -704,11 +722,22 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       shadowSize: [41, 41]
     });
     
+    // Correct answer pin
+    var blueIcon = new L.Icon({
+      iconUrl: imgPath + 'marker-icon-2x-blue.png',
+      shadowUrl: imgPath + 'marker-shadow.png',
+      iconSize: [30, 50],
+      iconAnchor: [15, 50],
+      popupAnchor: [1, -34],
+      shadowSize: [50, 50]
+    });
+
     this.icons = {
       'green': greenIcon,
       'yellow': yellowIcon,
       'orange': orangeIcon,
-      'red': redIcon
+      'red': redIcon,
+      'blue': blueIcon
     }
   }
 
