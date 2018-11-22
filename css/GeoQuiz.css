@@ -17,7 +17,7 @@
   text-align: center;
   left: 0;
   right: 0;
-  background-color: rgba(255,255,255,0.3); /* background with opacity */
+  background-color: rgba(255,255,255,0.9); /* background with opacity */
   z-index: 9999; /* Specify a stack order in case you're using a different order for other elements */
 }
 
