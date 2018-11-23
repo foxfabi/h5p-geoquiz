@@ -299,6 +299,9 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
   GeoQuiz.prototype.showQuestion = function () {
     var self = this;
 
+    // Reset map center and zoom level
+    var latlng = self.coordSplit(self.options.mapCenter);
+    self.map.flyTo(latlng, self.options.mapZoom);
     // Reset stored informations
     self.scoreBar.setScore(0);
     self.userAnswerCountry = '';
@@ -373,8 +376,8 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     var self = this;
     // Reset map center and zoom level
     var latlng = self.coordSplit(self.options.mapCenter);
-    self.map.setView(latlng, self.options.mapZoom);
-
+    self.map.flyTo(latlng, self.options.mapZoom);
+    
     $('#h5p-geoquiz-answer-content').css({'opacity':0});
 
     // Add location answer if set
@@ -389,6 +392,11 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
         self.mapLayers.userAnswerMarker.getLatLng(),
         self.mapLayers.correctAnswerMarker.getLatLng()
       ];
+      var bounds = L.latLngBounds(
+        self.mapLayers.userAnswerMarker.getLatLng(),
+        self.mapLayers.correctAnswerMarker.getLatLng()
+      );
+      self.map.flyToBounds(bounds);
       self.mapLayers.solutionDistanceLine = new L.polyline(pointList, {
         color: 'red',
         weight: 3,
@@ -404,14 +412,14 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     }
 
     $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800, function() {
+      // Add the user answer marker
+      if (self.mapLayers.userAnswerMarker !== undefined) {
+        self.map.addLayer(self.mapLayers.userAnswerMarker);
+      }
       if (self.mapLayers.solutionDistanceLine !== undefined) {
         // Remove old line
         self.map.removeLayer(self.mapLayers.solutionDistanceLine);
         self.mapLayers.solutionDistanceLine = undefined;
-      }
-      // Add the user answer marker
-      if (self.mapLayers.userAnswerMarker !== undefined) {
-        self.map.addLayer(self.mapLayers.userAnswerMarker);
       }
     });
   }
