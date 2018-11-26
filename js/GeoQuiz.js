@@ -88,7 +88,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
       'userAnswerMarker': undefined,    //Keeps track of user answer map marker.
       'correctAnswerMarker': undefined, //Keeps track of correct answer map marker.
       'correctAnswerArea': undefined,   //Keeps track of correct answer map area.
-      'solutionDistanceLine': undefined   //Keeps track of line between user marker and correct marker.
     };
 
     H5P.EventDispatcher.call(this);
@@ -307,10 +306,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     self.userAnswerCountry = '';
     self.correctAnswerCountry = '';
 
-    if (self.mapLayers.solutionDistanceLine !== undefined) {
-      self.map.removeLayer(self.mapLayers.solutionDistanceLine);
-      self.mapLayers.solutionDistanceLine = undefined;
-    }
     if (self.mapLayers.userAnswerMarker !== undefined) {
       self.map.removeLayer(self.mapLayers.userAnswerMarker);
       self.mapLayers.userAnswerMarker = undefined;
@@ -383,10 +378,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     // Add location answer if set
     if (self.mapLayers.correctAnswerMarker !== undefined) {
       self.mapLayers.correctAnswerMarker.addTo(self.map);
-      // Remove the user answer marker
-      if (self.mapLayers.userAnswerMarker !== undefined) {
-        self.map.removeLayer(self.mapLayers.userAnswerMarker);
-      }
       // Add a line to show distance to correct answer
       var pointList = [
         self.mapLayers.userAnswerMarker.getLatLng(),
@@ -396,14 +387,7 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
         self.mapLayers.userAnswerMarker.getLatLng(),
         self.mapLayers.correctAnswerMarker.getLatLng()
       );
-      self.map.flyToBounds(bounds);
-      self.mapLayers.solutionDistanceLine = new L.polyline(pointList, {
-        color: 'red',
-        weight: 3,
-        opacity: 0.7,
-        smoothFactor: 1
-      });
-      self.mapLayers.solutionDistanceLine.addTo(self.map);
+      self.map.flyToBounds(bounds, { padding: [40, 40] });
     }
 
     // Add area answer if set
@@ -412,15 +396,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     }
 
     $('#h5p-geoquiz-answer-content').delay(800).animate({'opacity':1}, 800, function() {
-      // Add the user answer marker
-      if (self.mapLayers.userAnswerMarker !== undefined) {
-        self.map.addLayer(self.mapLayers.userAnswerMarker);
-      }
-      if (self.mapLayers.solutionDistanceLine !== undefined) {
-        // Remove old line
-        self.map.removeLayer(self.mapLayers.solutionDistanceLine);
-        self.mapLayers.solutionDistanceLine = undefined;
-      }
     });
   }
 
@@ -834,7 +809,6 @@ H5P.GeoQuiz = (function ($, JoubelUI, Question) {
     self.mapLayers.userAnswerMarker = undefined;
     self.mapLayers.correctAnswerMarker = undefined;
     self.mapLayers.correctAnswerArea = undefined;
-    self.mapLayers.solutionDistanceLine = undefined;
     self.mapLayers.solution = undefined;
     self.questionIndex = 0;
     self.userScore = 0;
